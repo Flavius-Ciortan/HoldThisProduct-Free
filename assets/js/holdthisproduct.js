@@ -1,28 +1,64 @@
 jQuery(document).ready(function($) {
+	var modalOpener = null;
+	var $modal = $('#reservation-modal');
+
+	function closeReservationModal() {
+		$modal.hide().attr('aria-hidden', 'true');
+		if (modalOpener) {
+			$(modalOpener).trigger('focus');
+		}
+	}
+	$(document).on('click', '.htp-reservations-table .cancel-reservation[data-reservation-id]', function(e) {
+		e.preventDefault();
+		var $link = $(this);
+		if (!window.confirm($link.data('confirm'))) {
+			return;
+		}
+		$('<form>', { method: 'post', action: window.location.href })
+			.append($('<input>', { type: 'hidden', name: 'htp_cancel_res', value: $link.data('reservation-id') }))
+			.append($('<input>', { type: 'hidden', name: '_wpnonce', value: $link.data('cancel-nonce') }))
+			.appendTo('body')
+			.trigger('submit');
+	});
 
     $('#htp_reserve_product').on('click', function(e) {
         e.preventDefault();
         var productId = $(this).data('productid');
+		modalOpener = this;
 
         if (holdthisproduct_ajax.is_logged_in == 0) {
-            alert('Please log in to reserve products.');
+			alert(holdthisproduct_ajax.i18n.loginRequired);
             return;
         }
 
         $('#reservation-form').find('input[name="product_id"]').val(productId);
         
-        $('#reservation-modal').show();
+		$modal.show().attr('aria-hidden', 'false');
+		$modal.find('.modal-box').trigger('focus');
     });
 
     $(document).on('click', '.modal-overlay', function(e) {
         if (e.target === this) {
-            $('#reservation-modal').hide();
+			closeReservationModal();
         }
     });
 
     $(document).on('keydown', function(e) {
         if (e.key === 'Escape') {
-            $('#reservation-modal').hide();
+			closeReservationModal();
+		} else if (e.key === 'Tab' && $modal.is(':visible')) {
+			var $focusable = $modal.find('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])').filter(':visible');
+			if ($focusable.length) {
+				var first = $focusable.get(0);
+				var last = $focusable.get($focusable.length - 1);
+				if (e.shiftKey && document.activeElement === first) {
+					e.preventDefault();
+					$(last).trigger('focus');
+				} else if (!e.shiftKey && document.activeElement === last) {
+					e.preventDefault();
+					$(first).trigger('focus');
+				}
+			}
         }
     });
 
@@ -40,20 +76,20 @@ jQuery(document).ready(function($) {
 
         var $submitBtn = $form.find('button[type="submit"]');
         var originalText = $submitBtn.text();
-        $submitBtn.prop('disabled', true).text('Processing...');
+		$submitBtn.prop('disabled', true).text(holdthisproduct_ajax.i18n.processing);
 
         $.post(holdthisproduct_ajax.ajax_url, ajaxData)
         .done(function(response) {
             if (response.success) {
-                alert('Reservation successful!');
-                $('#reservation-modal').hide();
+				alert(holdthisproduct_ajax.i18n.success);
+				closeReservationModal();
                 location.reload();
             } else {
-                alert('Error: ' + response.data);
+				alert(holdthisproduct_ajax.i18n.error + ' ' + response.data);
             }
         })
         .fail(function() {
-            alert('Request failed. Please try again.');
+			alert(holdthisproduct_ajax.i18n.failed);
         })
         .always(function() {
             $submitBtn.prop('disabled', false).text(originalText);

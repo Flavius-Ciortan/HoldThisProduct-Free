@@ -6,13 +6,22 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * Admin reservations management (list, filters, actions, AJAX).
  */
 class HTP_Admin_Reservations {
+	private $reservations;
 
-    public function __construct() {
+	public function __construct( $reservations = null ) {
+		$this->reservations = $reservations instanceof HTP_Reservations ? $reservations : null;
         add_action( 'wp_ajax_htp_cancel_admin_reservation', array( $this, 'handle_admin_cancel_reservation' ) );
         add_action( 'wp_ajax_htp_delete_admin_reservation', array( $this, 'handle_admin_delete_reservation' ) );
         add_action( 'wp_ajax_htp_approve_reservation', array( $this, 'handle_approve_reservation' ) );
         add_action( 'wp_ajax_htp_deny_reservation', array( $this, 'handle_deny_reservation' ) );
     }
+
+	private function get_reservations_handler() {
+		if ( ! $this->reservations ) {
+			$this->reservations = new HTP_Reservations();
+		}
+		return $this->reservations;
+	}
 
     public function enqueue_assets() {
         wp_enqueue_script( 'jquery' );
@@ -20,11 +29,17 @@ class HTP_Admin_Reservations {
     }
 
     public function render_page() {
-        $status_filter = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : 'all';
-        $search_query  = isset( $_GET['search'] ) ? sanitize_text_field( $_GET['search'] ) : '';
-        $search_type   = isset( $_GET['search_type'] ) ? sanitize_text_field( $_GET['search_type'] ) : 'email';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only list filters.
+		$status_filter = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : 'all';
+		$search_query  = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
+		$search_type   = isset( $_GET['search_type'] ) ? sanitize_key( wp_unslash( $_GET['search_type'] ) ) : 'email';
+		$page          = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		$status_filter = in_array( $status_filter, array( 'all', 'pending_approval', 'active', 'expired', 'cancelled', 'fulfilled', 'denied', 'order_cancelled' ), true ) ? $status_filter : 'all';
+		$search_type = in_array( $search_type, array( 'email', 'product', 'product_id', 'customer_name' ), true ) ? $search_type : 'email';
 
-        $reservations = $this->get_filtered_reservations( $status_filter, $search_query, $search_type );
+		$query = $this->get_filtered_reservations( $status_filter, $search_query, $search_type, $page );
+		$reservations = $query->posts;
         $stats        = $this->get_reservations_summary();
         ?>
         <div class="wrap">
@@ -68,7 +83,7 @@ class HTP_Admin_Reservations {
                 </div>
 
                 <div class="alignright">
-                    <span class="displaying-num"><?php printf( __( '%d reservations', 'hold-this-product' ), count( $reservations ) ); ?></span>
+					<span class="displaying-num"><?php /* translators: %d: number of reservations. */ printf( esc_html__( '%d reservations', 'hold-this-product' ), esc_html( number_format_i18n( $query->found_posts ) ) ); ?></span>
                 </div>
             </div>
 
@@ -95,6 +110,7 @@ class HTP_Admin_Reservations {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+				<?php echo wp_kses_post( paginate_links( array( 'base' => add_query_arg( array( 'paged' => '%#%', 'status' => $status_filter, 'search_type' => $search_type, 'search' => $search_query ) ), 'current' => $page, 'total' => max( 1, (int) $query->max_num_pages ) ) ) ); ?>
             <?php endif; ?>
         </div>
 
@@ -142,7 +158,7 @@ class HTP_Admin_Reservations {
                     $.post(ajaxurl, {
                         action: 'htp_delete_admin_reservation',
                         reservation_id: reservationId,
-                        nonce: '<?php echo wp_create_nonce( 'htp_admin_delete' ); ?>'
+                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_delete' ) ); ?>'
                     })
                     .done(function(response) {
                         if (response.success) {
@@ -186,7 +202,7 @@ class HTP_Admin_Reservations {
                     $.post(ajaxurl, {
                         action: 'htp_approve_reservation',
                         reservation_id: reservationId,
-                        nonce: '<?php echo wp_create_nonce( 'htp_admin_approve' ); ?>'
+                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_approve' ) ); ?>'
                     })
                     .done(function(response) {
                         if (response.success) {
@@ -230,7 +246,7 @@ class HTP_Admin_Reservations {
                         action: 'htp_deny_reservation',
                         reservation_id: reservationId,
                         reason: reason,
-                        nonce: '<?php echo wp_create_nonce( 'htp_admin_deny' ); ?>'
+                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_deny' ) ); ?>'
                     })
                     .done(function(response) {
                         if (response.success) {
@@ -279,7 +295,7 @@ class HTP_Admin_Reservations {
                     $.post(ajaxurl, {
                         action: 'htp_cancel_admin_reservation',
                         reservation_id: reservationId,
-                        nonce: '<?php echo wp_create_nonce( 'htp_admin_cancel' ); ?>'
+                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_cancel' ) ); ?>'
                     })
                     .done(function(response) {
                         if (response.success) {
@@ -307,8 +323,8 @@ class HTP_Admin_Reservations {
 
         check_ajax_referer( 'htp_admin_cancel', 'nonce' );
 
-        $reservation_id = absint( $_POST['reservation_id'] ?? 0 );
-        if ( ! $reservation_id ) {
+		$reservation_id = isset( $_POST['reservation_id'] ) ? absint( wp_unslash( $_POST['reservation_id'] ) ) : 0;
+		if ( ! $reservation_id || 'htp_reservation' !== get_post_type( $reservation_id ) ) {
             wp_send_json_error( 'Invalid reservation ID.' );
         }
 
@@ -317,10 +333,9 @@ class HTP_Admin_Reservations {
             wp_send_json_error( 'Reservation is not active.' );
         }
 
-        $reservations = new HTP_Reservations();
-        $reservations->cancel_reservation( $reservation_id );
+		$this->get_reservations_handler()->cancel_reservation( $reservation_id );
 
-        update_post_meta( $reservation_id, '_htp_cancelled_by_admin', current_time( 'timestamp' ) );
+		update_post_meta( $reservation_id, '_htp_cancelled_by_admin', time() );
         update_post_meta( $reservation_id, '_htp_cancelled_by_user', get_current_user_id() );
 
         wp_send_json_success( 'Reservation cancelled successfully.' );
@@ -333,8 +348,8 @@ class HTP_Admin_Reservations {
 
         check_ajax_referer( 'htp_admin_delete', 'nonce' );
 
-        $reservation_id = absint( $_POST['reservation_id'] ?? 0 );
-        if ( ! $reservation_id ) {
+		$reservation_id = isset( $_POST['reservation_id'] ) ? absint( wp_unslash( $_POST['reservation_id'] ) ) : 0;
+		if ( ! $reservation_id || 'htp_reservation' !== get_post_type( $reservation_id ) ) {
             wp_send_json_error( 'Invalid reservation ID.' );
         }
 
@@ -358,7 +373,7 @@ class HTP_Admin_Reservations {
 
         check_ajax_referer( 'htp_admin_approve', 'nonce' );
 
-        $reservation_id = absint( $_POST['reservation_id'] ?? 0 );
+		$reservation_id = isset( $_POST['reservation_id'] ) ? absint( wp_unslash( $_POST['reservation_id'] ) ) : 0;
         if ( ! $reservation_id ) {
             wp_send_json_error( 'Invalid reservation ID.' );
         }
@@ -368,8 +383,7 @@ class HTP_Admin_Reservations {
             wp_send_json_error( 'Invalid reservation.' );
         }
 
-        $reservations = new HTP_Reservations();
-        $result = $reservations->approve_reservation( $reservation_id );
+		$result = $this->get_reservations_handler()->approve_reservation( $reservation_id );
 
         if ( is_wp_error( $result ) ) {
             wp_send_json_error( $result->get_error_message() );
@@ -387,8 +401,8 @@ class HTP_Admin_Reservations {
 
         check_ajax_referer( 'htp_admin_deny', 'nonce' );
 
-        $reservation_id = absint( $_POST['reservation_id'] ?? 0 );
-        $reason         = sanitize_text_field( $_POST['reason'] ?? '' );
+		$reservation_id = isset( $_POST['reservation_id'] ) ? absint( wp_unslash( $_POST['reservation_id'] ) ) : 0;
+		$reason         = isset( $_POST['reason'] ) ? sanitize_text_field( wp_unslash( $_POST['reason'] ) ) : '';
 
         if ( ! $reservation_id ) {
             wp_send_json_error( 'Invalid reservation ID.' );
@@ -399,8 +413,7 @@ class HTP_Admin_Reservations {
             wp_send_json_error( 'Invalid reservation.' );
         }
 
-        $reservations = new HTP_Reservations();
-        $result = $reservations->deny_reservation( $reservation_id, $reason );
+		$result = $this->get_reservations_handler()->deny_reservation( $reservation_id, $reason );
 
         if ( $result ) {
             wp_send_json_success( 'Reservation denied successfully.' );
@@ -409,10 +422,11 @@ class HTP_Admin_Reservations {
         wp_send_json_error( 'Failed to deny reservation.' );
     }
 
-    private function get_filtered_reservations( $status_filter = 'all', $search_query = '', $search_type = 'email' ) {
+	private function get_filtered_reservations( $status_filter = 'all', $search_query = '', $search_type = 'email', $page = 1 ) {
         global $wpdb;
 
         $meta_query = array();
+		$author_ids = null;
 
         if ( $status_filter !== 'all' ) {
             $meta_query[] = array(
@@ -461,17 +475,7 @@ class HTP_Admin_Reservations {
                     break;
 
                 case 'customer_name':
-                    $meta_query['relation'] = 'OR';
-                    $meta_query[] = array(
-                        'key'     => '_htp_name',
-                        'value'   => $search_query,
-                        'compare' => 'LIKE',
-                    );
-                    $meta_query[] = array(
-                        'key'     => '_htp_surname',
-                        'value'   => $search_query,
-                        'compare' => 'LIKE',
-                    );
+					$author_ids = get_users( array( 'search' => '*' . $search_query . '*', 'search_columns' => array( 'display_name', 'user_login', 'user_email' ), 'fields' => 'ids', 'number' => 100 ) );
                     break;
             }
         }
@@ -479,7 +483,8 @@ class HTP_Admin_Reservations {
         $args = array(
             'post_type'      => 'htp_reservation',
             'post_status'    => 'publish',
-            'posts_per_page' => 100,
+			'posts_per_page' => 25,
+			'paged'          => max( 1, absint( $page ) ),
             'orderby'        => 'date',
             'order'          => 'DESC',
         );
@@ -487,41 +492,34 @@ class HTP_Admin_Reservations {
         if ( ! empty( $meta_query ) ) {
             $args['meta_query'] = $meta_query;
         }
+		if ( null !== $author_ids ) {
+			$args['author__in'] = $author_ids ? array_map( 'absint', $author_ids ) : array( 0 );
+		}
 
-        return get_posts( $args );
-    }
-
-    private function count_reservations_by_status( $status ) {
-        global $wpdb;
-
-        return (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation'
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status'
-            AND pm.meta_value = %s",
-            $status
-        ) );
+		return new WP_Query( $args );
     }
 
     private function get_reservations_summary() {
+		$cached = wp_cache_get( 'admin_summary', 'holdthisproduct' );
+		if ( false !== $cached ) {
+			return $cached;
+		}
         global $wpdb;
-
-        $total = (int) $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->posts}
-            WHERE post_type = 'htp_reservation' AND post_status = 'publish'"
-        );
-
-        return array(
-            'total'            => $total,
-            'pending_approval' => $this->count_reservations_by_status( 'pending_approval' ),
-            'active'           => $this->count_reservations_by_status( 'active' ),
-            'expired'          => $this->count_reservations_by_status( 'expired' ),
-            'cancelled'        => $this->count_reservations_by_status( 'cancelled' ),
-            'fulfilled'        => $this->count_reservations_by_status( 'fulfilled' ),
-            'denied'           => $this->count_reservations_by_status( 'denied' ),
-        );
+		$rows = $wpdb->get_results(
+			"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count
+			FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_htp_status'
+			WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
+			OBJECT_K
+		); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- No external values are interpolated.
+		$summary = array( 'total' => 0, 'pending_approval' => 0, 'active' => 0, 'expired' => 0, 'cancelled' => 0, 'fulfilled' => 0, 'denied' => 0 );
+		foreach ( (array) $rows as $status => $row ) {
+			if ( isset( $summary[ $status ] ) ) {
+				$summary[ $status ] = (int) $row->reservation_count;
+				$summary['total'] += (int) $row->reservation_count;
+			}
+		}
+		wp_cache_set( 'admin_summary', $summary, 'holdthisproduct', MINUTE_IN_SECONDS );
+		return $summary;
     }
 
     private function render_row( $reservation ) {
@@ -552,12 +550,12 @@ class HTP_Admin_Reservations {
         }
 
         $reserved_date = get_the_date( 'M j, Y @ H:i', $reservation );
-        $expires_disp  = $expires_ts ? date_i18n( 'M j, Y @ H:i', $expires_ts ) : '—';
+		$expires_disp  = $expires_ts ? wp_date( 'M j, Y @ H:i', $expires_ts ) : '—';
 
         $time_left  = '—';
         $time_class = '';
         if ( $expires_ts && $status === 'active' ) {
-            $diff = $expires_ts - current_time( 'timestamp' );
+			$diff = $expires_ts - time();
             if ( $diff > 0 ) {
                 $days    = floor( $diff / DAY_IN_SECONDS );
                 $hours   = floor( ( $diff % DAY_IN_SECONDS ) / HOUR_IN_SECONDS );
@@ -605,28 +603,28 @@ class HTP_Admin_Reservations {
             echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
             echo 'data-customer="' . esc_attr( $customer_short ) . '" ';
             echo 'data-product="' . esc_attr( $product_name ) . '" style="margin-right: 5px;">';
-            echo __( 'Approve', 'hold-this-product' );
+            echo esc_html__( 'Approve', 'hold-this-product' );
             echo '</button>';
 
             echo '<button type="button" class="button button-small button-link-delete htp-deny-reservation" ';
             echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
             echo 'data-customer="' . esc_attr( $customer_short ) . '" ';
             echo 'data-product="' . esc_attr( $product_name ) . '">';
-            echo __( 'Deny', 'hold-this-product' );
+            echo esc_html__( 'Deny', 'hold-this-product' );
             echo '</button>';
         } elseif ( $status === 'active' ) {
             echo '<button type="button" class="button button-small htp-cancel-reservation" ';
             echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
             echo 'data-customer="' . esc_attr( $customer_short ) . '" ';
             echo 'data-product="' . esc_attr( $product_name ) . '">';
-            echo __( 'Cancel', 'hold-this-product' );
+            echo esc_html__( 'Cancel', 'hold-this-product' );
             echo '</button>';
         } else {
             echo '<button type="button" class="button button-small button-link-delete htp-delete-reservation" ';
             echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
             echo 'data-customer="' . esc_attr( $customer_short ) . '" ';
             echo 'data-product="' . esc_attr( $product_name ) . '">';
-            echo __( 'Delete', 'hold-this-product' );
+            echo esc_html__( 'Delete', 'hold-this-product' );
             echo '</button>';
         }
 
@@ -634,4 +632,3 @@ class HTP_Admin_Reservations {
         echo '</tr>';
     }
 }
-

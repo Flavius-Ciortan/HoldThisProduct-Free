@@ -8,12 +8,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class HTP_Admin {
 
     private $reservations_admin;
+	private $reservations;
     
     /**
      * Constructor
      */
-    public function __construct() {
-        $this->reservations_admin = class_exists( 'HTP_Admin_Reservations' ) ? new HTP_Admin_Reservations() : null;
+	public function __construct( $reservations = null ) {
+		$this->reservations = $reservations instanceof HTP_Reservations ? $reservations : null;
+		$this->reservations_admin = class_exists( 'HTP_Admin_Reservations' ) ? new HTP_Admin_Reservations( $this->reservations ) : null;
         $this->init();
     }
     
@@ -33,8 +35,8 @@ class HTP_Admin {
      */
     public function add_admin_menu() {
         add_menu_page(
-            'Hold This Product Settings',
-            'Hold This Product',
+			__( 'Hold This Product Settings', 'hold-this-product' ),
+			__( 'Hold This Product', 'hold-this-product' ),
             'manage_options',
             'holdthisproduct-settings',
             array( $this, 'settings_page' ),
@@ -45,8 +47,8 @@ class HTP_Admin {
         // Add Settings submenu (points to the same page as the main menu)
         add_submenu_page(
             'holdthisproduct-settings',
-            'Settings',
-            'Settings',
+			__( 'Settings', 'hold-this-product' ),
+			__( 'Settings', 'hold-this-product' ),
             'manage_options',
             'holdthisproduct-settings',
             array( $this, 'settings_page' )
@@ -55,8 +57,8 @@ class HTP_Admin {
         // Add reservations management submenu
         add_submenu_page(
             'holdthisproduct-settings',
-            'Reservations',
-            'Reservations',
+			__( 'Reservations', 'hold-this-product' ),
+			__( 'Reservations', 'hold-this-product' ),
             'manage_options',
             'holdthisproduct-manage-reservations',
             $this->reservations_admin ? array( $this->reservations_admin, 'render_page' ) : '__return_null'
@@ -67,7 +69,7 @@ class HTP_Admin {
      * Initialize settings
      */
     public function init_settings() {
-        register_setting( 'holdthisproduct_options_group', 'holdthisproduct_options' );
+		register_setting( 'holdthisproduct_options_group', 'holdthisproduct_options', array( 'sanitize_callback' => array( $this, 'sanitize_options' ) ) );
         
         add_settings_section(
             'holdthisproduct_settings_section',
@@ -77,11 +79,11 @@ class HTP_Admin {
         );
         
         $fields = array(
-            'holdthisproduct_enable_reservation' => 'Enable Reservation',
-            'holdthisproduct_max_reservations' => 'Max Reservations Per User',
-            'holdthisproduct_reservation_duration' => 'Reservation Duration (hours)',
-            'holdthisproduct_enable_email_notifications' => 'Enable Email Notifications',
-            'holdthisproduct_require_admin_approval' => 'Require Admin Approval for Reservations'
+			'holdthisproduct_enable_reservation' => __( 'Enable Reservation', 'hold-this-product' ),
+			'holdthisproduct_max_reservations' => __( 'Max Reservations Per User', 'hold-this-product' ),
+			'holdthisproduct_reservation_duration' => __( 'Reservation Duration (hours)', 'hold-this-product' ),
+			'holdthisproduct_enable_email_notifications' => __( 'Enable Email Notifications', 'hold-this-product' ),
+			'holdthisproduct_require_admin_approval' => __( 'Require Admin Approval for Reservations', 'hold-this-product' )
         );
         
         foreach ( $fields as $id => $title ) {
@@ -94,6 +96,42 @@ class HTP_Admin {
             );
         }
     }
+
+	/** Validate the existing settings form without changing its fields or layout. */
+	public function sanitize_options( $input ) {
+		$input = is_array( $input ) ? $input : array();
+		$popup = isset( $input['popup_customization_logged_in'] ) && is_array( $input['popup_customization_logged_in'] ) ? $input['popup_customization_logged_in'] : array();
+		$allowed_fonts = array(
+			'Arial, Helvetica, sans-serif', 'Verdana, Geneva, sans-serif', 'Georgia, serif',
+			'Times New Roman, Times, serif', 'Tahoma, Geneva, sans-serif',
+			'Trebuchet MS, Helvetica, sans-serif', 'Courier New, Courier, monospace',
+			'Roboto, sans-serif', 'Open Sans, sans-serif', 'Lato, sans-serif', 'Montserrat, sans-serif',
+		);
+		$font = isset( $popup['font_family'] ) ? sanitize_text_field( $popup['font_family'] ) : 'Arial, Helvetica, sans-serif';
+		if ( ! in_array( $font, $allowed_fonts, true ) ) {
+			$font = 'Arial, Helvetica, sans-serif';
+		}
+		$background = sanitize_hex_color( isset( $popup['background_color'] ) ? $popup['background_color'] : '' );
+		$text = sanitize_hex_color( isset( $popup['text_color'] ) ? $popup['text_color'] : '' );
+		$reservation_duration = max( 1, min( 168, intval( isset( $input['reservation_duration'] ) ? $input['reservation_duration'] : 24 ) ) );
+
+		return array(
+			'enable_reservation' => empty( $input['enable_reservation'] ) ? 0 : 1,
+			'max_reservations' => max( 1, min( 100, absint( isset( $input['max_reservations'] ) ? $input['max_reservations'] : 1 ) ) ),
+			'reservation_duration' => $reservation_duration,
+			'pending_duration' => max( 1, min( 168, intval( isset( $input['pending_duration'] ) ? $input['pending_duration'] : $reservation_duration ) ) ),
+			'enable_email_notifications' => empty( $input['enable_email_notifications'] ) ? 0 : 1,
+			'require_admin_approval' => empty( $input['require_admin_approval'] ) ? 0 : 1,
+			'enable_popup_customization_logged_in' => empty( $input['enable_popup_customization_logged_in'] ) ? 0 : 1,
+			'popup_customization_logged_in' => array(
+				'border_radius' => max( 0, min( 50, absint( isset( $popup['border_radius'] ) ? $popup['border_radius'] : 12 ) ) ),
+				'background_color' => $background ? $background : '#ffffff',
+				'font_family' => $font,
+				'font_size' => max( 10, min( 40, absint( isset( $popup['font_size'] ) ? $popup['font_size'] : 16 ) ) ),
+				'text_color' => $text ? $text : '#222222',
+			),
+		);
+	}
     
     /**
      * Enable reservation field callback
@@ -104,7 +142,7 @@ class HTP_Admin {
         echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <label class="toggle-switch">
-                        <input type="checkbox" name="holdthisproduct_options[enable_reservation]" value="1" ' . $checked . '>
+                        <input type="checkbox" name="holdthisproduct_options[enable_reservation]" value="1" ' . esc_attr( $checked ) . '>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -151,7 +189,7 @@ class HTP_Admin {
         echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <label class="toggle-switch">
-                        <input type="checkbox" name="holdthisproduct_options[enable_email_notifications]" value="1" ' . $checked . '>
+                        <input type="checkbox" name="holdthisproduct_options[enable_email_notifications]" value="1" ' . esc_attr( $checked ) . '>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -168,7 +206,7 @@ class HTP_Admin {
         echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <label class="toggle-switch">
-                        <input type="checkbox" name="holdthisproduct_options[require_admin_approval]" value="1" ' . $checked . '>
+                        <input type="checkbox" name="holdthisproduct_options[require_admin_approval]" value="1" ' . esc_attr( $checked ) . '>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -186,8 +224,8 @@ class HTP_Admin {
             <div class="htp-admin-header">
                 <div class="htp-header-content">
                     <div class="htp-title-section">
-                        <h1 class="htp-main-title">Hold This Product Settings</h1>
-                        <p class="htp-subtitle">Manage your product reservation system</p>
+						<h1 class="htp-main-title"><?php esc_html_e( 'Hold This Product Settings', 'hold-this-product' ); ?></h1>
+						<p class="htp-subtitle"><?php esc_html_e( 'Manage your product reservation system', 'hold-this-product' ); ?></p>
                     </div>
                     <div class="htp-logo-section">
                         <?php
@@ -205,9 +243,9 @@ class HTP_Admin {
                         }
                         
                         if ($logo_src): ?>
-                            <img src="<?php echo esc_url($logo_src); ?>" alt="Hold This Product Logo" class="htp-logo">
+							<img src="<?php echo esc_url($logo_src); ?>" alt="<?php esc_attr_e( 'Hold This Product Logo', 'hold-this-product' ); ?>" class="htp-logo">
                         <?php else: ?>
-                            <div class="htp-logo htp-logo-fallback" title="No logo file found. Checked: <?php echo implode(', ', $logo_files); ?>">HTP</div>
+                            <div class="htp-logo htp-logo-fallback" title="No logo file found. Checked: <?php echo esc_attr( implode( ', ', $logo_files ) ); ?>">HTP</div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -220,11 +258,11 @@ class HTP_Admin {
                     <div class="htp-nav-tabs">
                         <button type="button" class="htp-nav-tab" data-target="general">
                             <span class="htp-tab-icon">⚙️</span>
-                            <span class="htp-tab-text">General Settings</span>
+							<span class="htp-tab-text"><?php esc_html_e( 'General Settings', 'hold-this-product' ); ?></span>
                         </button>
                         <button type="button" class="htp-nav-tab" data-target="logged-in">
                             <span class="htp-tab-icon">🎨</span>
-                            <span class="htp-tab-text">Pop-up Customization</span>
+							<span class="htp-tab-text"><?php esc_html_e( 'Pop-up Customization', 'hold-this-product' ); ?></span>
                         </button>
                     </div>
                 </div>
@@ -237,8 +275,8 @@ class HTP_Admin {
                         <div id="htp-general" class="htp-tab-content">
                             <div class="htp-settings-card">
                                 <div class="htp-card-header">
-                                    <h3>Configuration</h3>
-                                    <p>Configure the basic settings for your reservation system</p>
+									<h3><?php esc_html_e( 'Configuration', 'hold-this-product' ); ?></h3>
+									<p><?php esc_html_e( 'Configure the basic settings for your reservation system', 'hold-this-product' ); ?></p>
                                 </div>
                                 <div class="htp-card-body">
                                     <?php do_settings_sections( 'holdthisproduct-settings' ); ?>
@@ -250,18 +288,19 @@ class HTP_Admin {
                         <div id="htp-logged-in" class="htp-tab-content">
                             <div class="htp-settings-card">
                                 <div class="htp-card-header">
-                                    <h3>Pop-up Customization</h3>
-                                    <p>Customize the appearance of the reservation pop-up modal</p>
+									<h3><?php esc_html_e( 'Pop-up Customization', 'hold-this-product' ); ?></h3>
+									<p><?php esc_html_e( 'Customize the appearance of the reservation pop-up modal', 'hold-this-product' ); ?></p>
                                 </div>
                                 <div class="htp-card-body">
                                     <?php
-                                    $options = get_option('holdthisproduct_options');
+									$options = get_option('holdthisproduct_options');
+									$options = is_array( $options ) ? $options : array();
                                     $enable_popup_customization_logged_in = isset($options['enable_popup_customization_logged_in']) ? (bool)$options['enable_popup_customization_logged_in'] : false;
                                     $popup_settings_logged_in = isset($options['popup_customization_logged_in']) ? $options['popup_customization_logged_in'] : [];
                                     ?>
 	                                    <table class="form-table">
 	                                        <tr>
-	                                            <th scope="row">Enable Pop-up Customization</th>
+	                                            <th scope="row"><?php esc_html_e( 'Enable Pop-up Customization', 'hold-this-product' ); ?></th>
 	                                            <td>
 	                                                <div class="htp-setting-field">
 	                                                    <div class="htp-setting-control">
@@ -270,7 +309,7 @@ class HTP_Admin {
 	                                                            <span class="slider"></span>
 	                                                        </label>
 	                                                    </div>
-	                                                    <p class="description">Enable custom styling for the reservation pop-up modal.</p>
+	                                                    <p class="description"><?php esc_html_e( 'Enable custom styling for the reservation pop-up modal.', 'hold-this-product' ); ?></p>
 	                                                </div>
 	                                            </td>
 	                                        </tr>
@@ -278,15 +317,15 @@ class HTP_Admin {
                                     <div class="htp-popup-customization-fields-logged-in" style="display:<?php echo $enable_popup_customization_logged_in ? 'block' : 'none'; ?>;margin-top:1rem;">
                                         <table class="form-table">
                                             <tr>
-                                                <th scope="row">Border Radius (px)</th>
+												<th scope="row"><?php esc_html_e( 'Border Radius (px)', 'hold-this-product' ); ?></th>
                                                 <td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][border_radius]" value="<?php echo esc_attr($popup_settings_logged_in['border_radius'] ?? '12'); ?>" min="0" max="50" class="htp-input-right-align"></td>
                                             </tr>
                                             <tr>
-                                                <th scope="row">Background Color</th>
+												<th scope="row"><?php esc_html_e( 'Background Color', 'hold-this-product' ); ?></th>
                                                 <td><input type="color" name="holdthisproduct_options[popup_customization_logged_in][background_color]" value="<?php echo esc_attr($popup_settings_logged_in['background_color'] ?? '#ffffff'); ?>" class="htp-input-right-align"></td>
                                             </tr>
                                             <tr>
-                                                <th scope="row">Font Family</th>
+												<th scope="row"><?php esc_html_e( 'Font Family', 'hold-this-product' ); ?></th>
                                                 <td>
                                                     <select name="holdthisproduct_options[popup_customization_logged_in][font_family]" class="htp-input-right-align">
                                                         <?php
@@ -312,11 +351,11 @@ class HTP_Admin {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <th scope="row">Font Size (px)</th>
+												<th scope="row"><?php esc_html_e( 'Font Size (px)', 'hold-this-product' ); ?></th>
                                                 <td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][font_size]" value="<?php echo esc_attr($popup_settings_logged_in['font_size'] ?? '16'); ?>" min="10" max="40" class="htp-input-right-align"></td>
                                             </tr>
                                             <tr>
-                                                <th scope="row">Text Color</th>
+												<th scope="row"><?php esc_html_e( 'Text Color', 'hold-this-product' ); ?></th>
                                                 <td><input type="color" name="holdthisproduct_options[popup_customization_logged_in][text_color]" value="<?php echo esc_attr($popup_settings_logged_in['text_color'] ?? '#222222'); ?>" class="htp-input-right-align"></td>
                                             </tr>
                                         </table>
@@ -326,7 +365,7 @@ class HTP_Admin {
                         </div>
                     </div>
                     <div class="htp-form-actions">
-                        <?php submit_button( 'Save Settings', 'primary htp-save-btn', 'submit', false ); ?>
+						<?php submit_button( __( 'Save Settings', 'hold-this-product' ), 'primary htp-save-btn', 'submit', false ); ?>
                     </div>
                 </form>
             </div>
@@ -416,16 +455,16 @@ class HTP_Admin {
         $reservations = $this->get_product_reservations( $post->ID );
         
         echo '<div class="options_group">';
-        echo '<h4 style="padding-left: 12px;">' . __( 'Active Reservations', 'hold-this-product' ) . '</h4>';
+        echo '<h4 style="padding-left: 12px;">' . esc_html__( 'Active Reservations', 'hold-this-product' ) . '</h4>';
         
         if ( empty( $reservations ) ) {
-            echo '<p>' . __( 'No active reservations for this product.', 'hold-this-product' ) . '</p>';
+            echo '<p>' . esc_html__( 'No active reservations for this product.', 'hold-this-product' ) . '</p>';
         } else {
             echo '<table class="widefat striped" style="margin-top: 10px;">';
             echo '<thead><tr>';
-            echo '<th>' . __( 'Customer', 'hold-this-product' ) . '</th>';
-            echo '<th>' . __( 'Expires', 'hold-this-product' ) . '</th>';
-            echo '<th>' . __( 'Action', 'hold-this-product' ) . '</th>';
+            echo '<th>' . esc_html__( 'Customer', 'hold-this-product' ) . '</th>';
+            echo '<th>' . esc_html__( 'Expires', 'hold-this-product' ) . '</th>';
+            echo '<th>' . esc_html__( 'Action', 'hold-this-product' ) . '</th>';
             echo '</tr></thead><tbody>';
             
             foreach ( $reservations as $reservation ) {
@@ -449,7 +488,7 @@ class HTP_Admin {
             'meta_query'     => array(
                 array( 'key' => '_htp_status', 'value' => 'active' ),
                 array( 'key' => '_htp_product_id', 'value' => $product_id ),
-                array( 'key' => '_htp_expires_at', 'value' => current_time( 'timestamp' ), 'type' => 'NUMERIC', 'compare' => '>' )
+				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' )
             ),
             'orderby' => 'date',
             'order' => 'DESC'
@@ -478,7 +517,7 @@ class HTP_Admin {
             }
         }
         
-        $expires_disp = $expires_ts ? date_i18n( 'M j, Y @ H:i', $expires_ts ) : '—';
+		$expires_disp = $expires_ts ? wp_date( 'M j, Y @ H:i', $expires_ts ) : '—';
         
         echo '<tr>';
         echo '<td>' . esc_html( $customer ) . '</td>';
@@ -487,7 +526,7 @@ class HTP_Admin {
         echo '<button type="button" class="button htp-cancel-reservation" ';
         echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
         echo 'data-customer="' . esc_attr( $customer ) . '">';
-        echo __( 'Cancel', 'hold-this-product' );
+        echo esc_html__( 'Cancel', 'hold-this-product' );
         echo '</button>';
         echo '</td>';
         echo '</tr>';
@@ -498,14 +537,16 @@ class HTP_Admin {
      */
     public function enqueue_admin_scripts( $hook ) {
         // Hook suffix can vary depending on menu nesting; `page` is stable.
-        $page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin page routing.
+        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
         // Apply menu icon sizing everywhere in wp-admin; scoped to our menu item only.
         wp_register_style( 'htp-admin-menu-inline', false, array(), HTP_VERSION );
         wp_enqueue_style( 'htp-admin-menu-inline' );
         wp_add_inline_style(
             'htp-admin-menu-inline',
-            '#toplevel_page_holdthisproduct-settings .wp-menu-image img{padding:0;width:30px;}'
+            '#toplevel_page_holdthisproduct-settings .wp-menu-image img{box-sizing:content-box;width:30px;height:30px;padding:2px 0;object-fit:contain;vertical-align:top;}' .
+            '#toplevel_page_holdthisproduct-settings .wp-menu-name{font-size:13px;white-space:nowrap;}'
         );
 
         if ( $hook === 'toplevel_page_holdthisproduct-settings' || $page === 'holdthisproduct-settings' ) {

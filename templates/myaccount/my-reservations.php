@@ -56,31 +56,34 @@ if ( ! defined( 'ABSPATH' ) ) {
             $is_expired = ( $status === 'expired' );
 
             $expires_disp = ( ( $is_active || $is_expired ) && $expires_ts )
-                ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $expires_ts )
+				? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $expires_ts )
                 : '—';
             
             // Calculate time left
             $time_left = '';
             $urgency_class = '';
             if ( $is_active && $expires_ts ) {
-                $diff = $expires_ts - current_time( 'timestamp' );
+				$diff = $expires_ts - time();
                 if ( $diff > 0 ) {
                     $days = floor( $diff / DAY_IN_SECONDS );
                     $hours = floor( ( $diff % DAY_IN_SECONDS ) / HOUR_IN_SECONDS );
                     $minutes = floor( ( $diff % HOUR_IN_SECONDS ) / MINUTE_IN_SECONDS );
                     
-                    if ( $days > 0 ) {
-                        $time_left = sprintf( _n( '%d day', '%d days', $days, 'hold-this-product' ), $days );
+					if ( $days > 0 ) {
+						/* translators: %d: number of days remaining. */
+						$time_left = sprintf( _n( '%d day', '%d days', $days, 'hold-this-product' ), $days );
                         if ( $hours > 0 ) {
                             $time_left .= sprintf( ', %d hours', $hours );
                         }
-                    } elseif ( $hours > 0 ) {
-                        $time_left = sprintf( _n( '%d hour', '%d hours', $hours, 'hold-this-product' ), $hours );
+					} elseif ( $hours > 0 ) {
+						/* translators: %d: number of hours remaining. */
+						$time_left = sprintf( _n( '%d hour', '%d hours', $hours, 'hold-this-product' ), $hours );
                         if ( $minutes > 0 ) {
                             $time_left .= sprintf( ', %d minutes', $minutes );
                         }
-                    } else {
-                        $time_left = sprintf( _n( '%d minute', '%d minutes', $minutes, 'hold-this-product' ), $minutes );
+					} else {
+						/* translators: %d: number of minutes remaining. */
+						$time_left = sprintf( _n( '%d minute', '%d minutes', $minutes, 'hold-this-product' ), $minutes );
                     }
                     
                     // Add urgency class for styling
@@ -113,10 +116,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             }
 
             $add_to_cart_url = esc_url( wc_get_cart_url() . '?add-to-cart=' . $product_id );
-            $cancel_url = wp_nonce_url(
-                add_query_arg( array( 'htp_cancel_res' => $reservation->ID ) ),
-                'htp_cancel_res_' . $reservation->ID
-            );
+			$cancel_nonce = wp_create_nonce( 'htp_cancel_res_' . $reservation->ID );
 
             $status_map = array(
                 'active'           => esc_html__( 'Active', 'hold-this-product' ),
@@ -170,7 +170,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </td>
                 <td class="woocommerce-orders-table__cell woocommerce-orders-table__cell-order-expires" data-title="<?php esc_attr_e( 'Expires', 'hold-this-product' ); ?>">
                     <?php if ( ( $is_active || $is_expired ) && $expires_ts ) : ?>
-                        <time datetime="<?php echo esc_attr( date( 'c', $expires_ts ) ); ?>">
+						<time datetime="<?php echo esc_attr( gmdate( DATE_ATOM, $expires_ts ) ); ?>">
                             <?php echo esc_html( $expires_disp ); ?>
                         </time>
                     <?php else : ?>
@@ -189,7 +189,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </a>
                     <?php endif; ?>
                     <?php if ( $is_active || $is_pending ) : ?>
-                        <a href="<?php echo esc_url( $cancel_url ); ?>" class="woocommerce-button button cancel-reservation" onclick="return confirm('<?php esc_attr_e( 'Are you sure you want to cancel this reservation?', 'hold-this-product' ); ?>')">
+						<a href="#" class="woocommerce-button button cancel-reservation" data-reservation-id="<?php echo esc_attr( $reservation->ID ); ?>" data-cancel-nonce="<?php echo esc_attr( $cancel_nonce ); ?>" data-confirm="<?php esc_attr_e( 'Are you sure you want to cancel this reservation?', 'hold-this-product' ); ?>">
                             <?php esc_html_e( 'Cancel', 'hold-this-product' ); ?>
                         </a>
                     <?php else : ?>
@@ -202,4 +202,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     </tbody>
 </table>
     </div>
+	<?php if ( isset( $total_pages, $current_page ) && $total_pages > 1 ) : ?>
+		<nav class="woocommerce-pagination" aria-label="<?php esc_attr_e( 'Reservation history pagination', 'hold-this-product' ); ?>">
+			<?php echo wp_kses_post( paginate_links( array( 'base' => add_query_arg( 'reservation-page', '%#%', wc_get_account_endpoint_url( 'htp-reservations' ) ), 'current' => $current_page, 'total' => $total_pages ) ) ); ?>
+		</nav>
+	<?php endif; ?>
 </div>

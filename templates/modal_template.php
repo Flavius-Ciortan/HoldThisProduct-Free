@@ -40,18 +40,12 @@ $font_family = isset( $popup_settings['font_family'] ) ? $popup_settings['font_f
 $font_size = isset( $popup_settings['font_size'] ) ? (int) $popup_settings['font_size'] : 16;
 $text_color = isset( $popup_settings['text_color'] ) ? $popup_settings['text_color'] : '#222222';
 
-// Google Fonts support
-$google_fonts = array(
-    'Roboto, sans-serif' => 'Roboto',
-    'Open Sans, sans-serif' => 'Open+Sans',
-    'Lato, sans-serif' => 'Lato',
-    'Montserrat, sans-serif' => 'Montserrat',
-);
-
-$google_font_link = '';
-if ( $enable_popup_customization && isset( $google_fonts[ $font_family ] ) ) {
-    $google_font_link = 'https://fonts.googleapis.com/css?family=' . $google_fonts[ $font_family ] . ':400,700&display=swap';
-}
+$allowed_fonts = array( 'Arial, Helvetica, sans-serif', 'Verdana, Geneva, sans-serif', 'Georgia, serif', 'Times New Roman, Times, serif', 'Tahoma, Geneva, sans-serif', 'Trebuchet MS, Helvetica, sans-serif', 'Courier New, Courier, monospace', 'Roboto, sans-serif', 'Open Sans, sans-serif', 'Lato, sans-serif', 'Montserrat, sans-serif' );
+$font_family = in_array( $font_family, $allowed_fonts, true ) ? $font_family : 'Arial, Helvetica, sans-serif';
+$background_color = sanitize_hex_color( $background_color ) ?: '#ffffff';
+$text_color = sanitize_hex_color( $text_color ) ?: '#222222';
+$border_radius = max( 0, min( 50, $border_radius ) );
+$font_size = max( 10, min( 40, $font_size ) );
 
 // Build inline style for modal box - only apply if customization is enabled.
 $modal_box_style = '';
@@ -67,29 +61,25 @@ if ( $enable_popup_customization ) {
 }
 ?>
 
-<?php if ( $google_font_link ) : ?>
-    <link href="<?php echo esc_url( $google_font_link ); ?>" rel="stylesheet" />
-<?php endif; ?>
-
-<div id="reservation-modal" class="modal-overlay htp-modal-overlay" title="Reserve Product" style="display: none;">
-    <div class="modal-box htp-modal-box<?php echo $enable_popup_customization ? ' htp-modal-box--custom' : ''; ?>" style="<?php echo $modal_box_style; ?>">
+<div id="reservation-modal" class="modal-overlay htp-modal-overlay" title="<?php esc_attr_e( 'Reserve Product', 'hold-this-product' ); ?>" aria-hidden="true" style="display: none;">
+    <div class="modal-box htp-modal-box<?php echo $enable_popup_customization ? ' htp-modal-box--custom' : ''; ?>" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Reserve Product', 'hold-this-product' ); ?>" tabindex="-1" style="<?php echo esc_attr( $modal_box_style ); ?>">
         <form id="reservation-form">
             <input type="hidden" name="action" value="holdthisproduct_reserve">
             <input type="hidden" name="security" value="<?php echo esc_attr( wp_create_nonce( 'holdthisproduct_nonce' ) ); ?>">
             <input type="hidden" name="product_id" value="<?php echo esc_attr( $pid ); ?>">
 
-            <p><strong>Reserve this product</strong></p>
+			<p><strong><?php esc_html_e( 'Reserve this product', 'hold-this-product' ); ?></strong></p>
             <p>
-                <?php
+				<?php
                 printf(
-                    'Are you sure you want to reserve this product for %d hour%s?',
-                    esc_html( $duration_hours ),
-                    $duration_hours === 1 ? '' : 's'
+					/* translators: %d: reservation duration in hours. */
+					esc_html( _n( 'Are you sure you want to reserve this product for %d hour?', 'Are you sure you want to reserve this product for %d hours?', $duration_hours, 'hold-this-product' ) ),
+					(int) $duration_hours
                 );
                 ?>
             </p>
 
-            <button type="submit" class="submit-btn htp-button-primary">Yes, Reserve</button>
+			<button type="submit" class="submit-btn htp-button-primary"><?php esc_html_e( 'Yes, Reserve', 'hold-this-product' ); ?></button>
         </form>
     </div>
 </div>
