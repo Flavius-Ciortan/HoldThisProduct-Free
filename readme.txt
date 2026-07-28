@@ -1,10 +1,10 @@
-=== HoldThisProduct - Product Reservation for WooCommerce ===
+=== Hold This Product ===
 Contributors: flaviusciortan
 Tags: woocommerce, reservation, product hold, cart reserve, stock management
-Requires at least: 5.8
-Tested up to: 6.7
+Requires at least: 6.5
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -57,8 +57,8 @@ Allow customers to reserve WooCommerce products for a limited time, ensuring sto
 
 = Minimum Requirements =
 
-* WordPress 5.8 or greater
-* WooCommerce 5.0 or greater
+* WordPress 6.5 or greater
+* WooCommerce 8.0 or greater
 * PHP version 7.4 or greater
 * MySQL version 5.6 or greater
 
@@ -139,6 +139,12 @@ Yes! HoldThisProduct is fully translation-ready. You can use tools like Loco Tra
 
 == Changelog ==
 
+= 1.0.1 - 2026-07-28 =
+* Hardened reservation authorization, validation, and settings sanitization
+* Made stock reservation, approval, cancellation, expiration, and checkout transfers idempotent
+* Added scheduled expiration, privacy tools integration, pagination, and accessibility improvements
+* Improved compatibility declarations, translations, and release metadata
+
 = 1.0.0 - 2025-11-12 =
 * Initial release
 * Product reservation system for logged-in users
@@ -152,6 +158,9 @@ Yes! HoldThisProduct is fully translation-ready. You can use tools like Loco Tra
 * WooCommerce stock management integration
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Recommended maintenance and security update for reservation and stock handling.
 
 = 1.0.0 =
 Initial release of HoldThisProduct. Start accepting product reservations today!

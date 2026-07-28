@@ -6,11 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * Reservation analytics and reporting
  */
 class HTP_Analytics {
+	private $reservations;
     
     /**
      * Constructor
      */
-    public function __construct() {
+	public function __construct( $reservations = null ) {
+		$this->reservations = $reservations instanceof HTP_Reservations ? $reservations : null;
         $this->init();
     }
     
@@ -28,8 +30,8 @@ class HTP_Analytics {
     public function add_analytics_submenu() {
         add_submenu_page(
             'holdthisproduct-settings',
-            'Reservation Analytics',
-            'Analytics',
+			__( 'Reservation Analytics', 'hold-this-product' ),
+			__( 'Analytics', 'hold-this-product' ),
             'manage_options',
             'holdthisproduct-analytics',
             array( $this, 'analytics_page' )
@@ -42,7 +44,8 @@ class HTP_Analytics {
     public function enqueue_analytics_scripts( $hook ) {
         // Some WP setups generate different hook suffixes for submenu pages.
         // Prefer checking the page slug as a reliable fallback.
-        $page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin page routing.
+        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
         if ( $hook === 'holdthisproduct_page_holdthisproduct-analytics' || $page === 'holdthisproduct-analytics' ) {
             wp_enqueue_style(
@@ -64,51 +67,51 @@ class HTP_Analytics {
         $stats = $this->get_reservation_stats();
         ?>
         <div class="wrap">
-            <h1>Reservation Analytics</h1>
+			<h1><?php esc_html_e( 'Reservation Analytics', 'hold-this-product' ); ?></h1>
             
             <div class="htp-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Total Reservations</h3>
+					<h3><?php esc_html_e( 'Total Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #0073aa;"><?php echo esc_html( $stats['total'] ); ?></p>
                 </div>
                 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Active Reservations</h3>
+					<h3><?php esc_html_e( 'Active Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #2F89F9;"><?php echo esc_html( $stats['active'] ); ?></p>
                 </div>
 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Pending Approval</h3>
+					<h3><?php esc_html_e( 'Pending Approval', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #f59e0b;"><?php echo esc_html( $stats['pending_approval'] ); ?></p>
                 </div>
                 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Expired Reservations</h3>
+					<h3><?php esc_html_e( 'Expired Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #ff8c00;"><?php echo esc_html( $stats['expired'] ); ?></p>
                 </div>
                 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Cancelled Reservations</h3>
+					<h3><?php esc_html_e( 'Cancelled Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #d63638;"><?php echo esc_html( $stats['cancelled'] ); ?></p>
                 </div>
 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Fulfilled Reservations</h3>
+					<h3><?php esc_html_e( 'Fulfilled Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #00a32a;"><?php echo esc_html( $stats['fulfilled'] ); ?></p>
                 </div>
 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Denied Reservations</h3>
+					<h3><?php esc_html_e( 'Denied Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #991b1b;"><?php echo esc_html( $stats['denied'] ); ?></p>
                 </div>
                 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3>Conversion Rate</h3>
+					<h3><?php esc_html_e( 'Conversion Rate', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #0073aa;"><?php echo esc_html( $stats['conversion_rate'] ); ?>%</p>
                 </div>
             </div>
             
-            <h2>Recent Reservations</h2>
+			<h2><?php esc_html_e( 'Recent Reservations', 'hold-this-product' ); ?></h2>
             <?php $this->display_recent_reservations(); ?>
         </div>
         <?php
@@ -118,43 +121,9 @@ class HTP_Analytics {
      * Expire old reservations for analytics accuracy
      */
     private function expire_old_reservations_for_analytics() {
-        global $wpdb;
-        
-        // Find reservations that are marked as 'active' but have passed their expiration time
-        $expired_reservations = $wpdb->get_col("
-            SELECT p.ID FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = '_htp_status' AND pm1.meta_value = 'active'
-            JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_htp_expires_at'
-            WHERE p.post_type = 'htp_reservation' 
-            AND p.post_status = 'publish'
-            AND CAST(pm2.meta_value AS UNSIGNED) < UNIX_TIMESTAMP()
-        ");
-        
-        // Update expired reservations
-        if ( ! empty( $expired_reservations ) ) {
-            // Load the reservations class to use its expire method
-            if ( class_exists( 'HTP_Reservations' ) ) {
-                $reservations_handler = new HTP_Reservations();
-                foreach ( $expired_reservations as $reservation_id ) {
-                    $reservations_handler->expire_reservation( $reservation_id );
-                }
-            } else {
-                // Fallback: update status directly
-                foreach ( $expired_reservations as $reservation_id ) {
-                    update_post_meta( $reservation_id, '_htp_status', 'expired' );
-                    
-                    // Restore stock
-                    $product_id = (int) get_post_meta( $reservation_id, '_htp_product_id', true );
-                    if ( $product_id ) {
-                        $product = wc_get_product( $product_id );
-                        if ( $product && $product->managing_stock() ) {
-                            $product->set_stock_quantity( $product->get_stock_quantity() + 1 );
-                            $product->save();
-                        }
-                    }
-                }
-            }
-        }
+		if ( $this->reservations ) {
+			$this->reservations->expire_old_reservations();
+		}
     }
     
     /**
@@ -162,78 +131,16 @@ class HTP_Analytics {
      */
     private function get_reservation_stats() {
         global $wpdb;
-        
-        $total = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} 
-            WHERE post_type = 'htp_reservation' AND post_status = 'publish'
-        ");
-        
-        $active = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation' 
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status' 
-            AND pm.meta_value = 'active'
-        ");
-
-        $pending_approval = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation'
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status'
-            AND pm.meta_value = 'pending_approval'
-        ");
-        
-        $expired = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation' 
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status' 
-            AND pm.meta_value = 'expired'
-        ");
-        
-        $fulfilled = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation' 
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status' 
-            AND pm.meta_value = 'fulfilled'
-        ");
-        
-        $cancelled = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation' 
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status' 
-            AND pm.meta_value = 'cancelled'
-        ");
-
-        $denied = $wpdb->get_var("
-            SELECT COUNT(*) FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'htp_reservation'
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_htp_status'
-            AND pm.meta_value = 'denied'
-        ");
-        
-        $conversion_rate = $total > 0 ? round( ( $fulfilled / $total ) * 100, 1 ) : 0;
-        
-        return array(
-            'total' => (int) $total,
-            'active' => (int) $active,
-            'pending_approval' => (int) $pending_approval,
-            'expired' => (int) $expired,
-            'fulfilled' => (int) $fulfilled,
-            'cancelled' => (int) $cancelled,
-            'denied' => (int) $denied,
-            'conversion_rate' => $conversion_rate
-        );
+		$rows = $wpdb->get_results( "SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_htp_status' WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value", OBJECT_K ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- No external values.
+		$stats = array( 'total' => 0, 'active' => 0, 'pending_approval' => 0, 'expired' => 0, 'fulfilled' => 0, 'cancelled' => 0, 'denied' => 0 );
+		foreach ( (array) $rows as $status => $row ) {
+			if ( isset( $stats[ $status ] ) ) {
+				$stats[ $status ] = (int) $row->reservation_count;
+				$stats['total'] += (int) $row->reservation_count;
+			}
+		}
+		$stats['conversion_rate'] = $stats['total'] ? round( ( $stats['fulfilled'] / $stats['total'] ) * 100, 1 ) : 0;
+		return $stats;
     }
     
     /**
@@ -249,12 +156,12 @@ class HTP_Analytics {
         ) );
         
         if ( empty( $reservations ) ) {
-            echo '<p>No reservations found.</p>';
+			echo '<p>' . esc_html__( 'No reservations found.', 'hold-this-product' ) . '</p>';
             return;
         }
         
         echo '<table class="wp-list-table widefat fixed striped">';
-        echo '<thead><tr><th>Product</th><th>Customer</th><th>Status</th><th>Created</th><th>Expires</th></tr></thead>';
+		echo '<thead><tr><th>' . esc_html__( 'Product', 'hold-this-product' ) . '</th><th>' . esc_html__( 'Customer', 'hold-this-product' ) . '</th><th>' . esc_html__( 'Status', 'hold-this-product' ) . '</th><th>' . esc_html__( 'Created', 'hold-this-product' ) . '</th><th>' . esc_html__( 'Expires', 'hold-this-product' ) . '</th></tr></thead>';
         echo '<tbody>';
         
         foreach ( $reservations as $reservation ) {
@@ -264,7 +171,7 @@ class HTP_Analytics {
             $expires_ts = get_post_meta( $reservation->ID, '_htp_expires_at', true );
             
             $product = wc_get_product( $product_id );
-            $product_name = $product ? $product->get_name() : 'Unknown Product';
+			$product_name = $product ? $product->get_name() : __( 'Unknown Product', 'hold-this-product' );
             
             // Determine customer display name
             if ( $reservation->post_author ) {
@@ -277,18 +184,18 @@ class HTP_Analytics {
                 $customer = ! empty( $full_name ) ? $full_name : $email;
             }
             
-            $expires = $expires_ts ? date_i18n( 'Y-m-d H:i', $expires_ts ) : '—';
+			$expires = $expires_ts ? wp_date( 'Y-m-d H:i', $expires_ts ) : '—';
             
             // Add CSS class for status styling with proper fallback
             // Mirror the reservations admin view: use hyphens for CSS class names.
             $status_slug = $status ? str_replace( '_', '-', $status ) : 'unknown';
-            $status_class = 'status-' . esc_attr( $status_slug );
-            $status_display = $status ? ucwords( str_replace( '_', ' ', $status ) ) : 'Unknown';
+			$status_class = 'status-' . $status_slug;
+			$status_display = $status ? ucwords( str_replace( '_', ' ', $status ) ) : __( 'Unknown', 'hold-this-product' );
             
             echo '<tr>';
             echo '<td>' . esc_html( $product_name ) . '</td>';
             echo '<td>' . esc_html( $customer ) . '</td>';
-            echo '<td><span class="' . $status_class . '">' . esc_html( $status_display ) . '</span></td>';
+            echo '<td><span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_display ) . '</span></td>';
             echo '<td>' . esc_html( get_the_date( 'Y-m-d H:i', $reservation ) ) . '</td>';
             echo '<td>' . esc_html( $expires ) . '</td>';
             echo '</tr>';

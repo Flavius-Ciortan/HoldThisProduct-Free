@@ -25,8 +25,8 @@ class HTP_Frontend {
     /**
      * Constructor
      */
-    public function __construct() {
-        $this->reservations = new HTP_Reservations();
+    public function __construct( $reservations = null ) {
+        $this->reservations = $reservations instanceof HTP_Reservations ? $reservations : new HTP_Reservations();
         $this->init();
     }
     
@@ -62,9 +62,9 @@ class HTP_Frontend {
         if ( ! $this->reservations->is_product_reservable( $product->get_id() ) ) {
             // Show message for non-logged-in users or when reservations are disabled
             if ( ! is_user_logged_in() ) {
-                echo '<p class="htp-reserve-unavailable" style="margin-top:8px;">Please <a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">log in</a> or <a href="' . esc_url( wp_registration_url() ) . '">create an account</a> to reserve this product.</p>';
+				printf( '<p class="htp-reserve-unavailable" style="margin-top:8px;">%1$s <a href="%2$s">%3$s</a> %4$s <a href="%5$s">%6$s</a> %7$s</p>', esc_html__( 'Please', 'hold-this-product' ), esc_url( wp_login_url( get_permalink() ) ), esc_html__( 'log in', 'hold-this-product' ), esc_html__( 'or', 'hold-this-product' ), esc_url( wp_registration_url() ), esc_html__( 'create an account', 'hold-this-product' ), esc_html__( 'to reserve this product.', 'hold-this-product' ) );
             } else {
-                echo '<p class="htp-reserve-unavailable" style="margin-top:8px;">Reservations are not available for this product.</p>';
+				echo '<p class="htp-reserve-unavailable" style="margin-top:8px;">' . esc_html__( 'Reservations are not available for this product.', 'hold-this-product' ) . '</p>';
             }
             return;
         }
@@ -77,6 +77,9 @@ class HTP_Frontend {
      * Enqueue frontend assets
      */
     public function enqueue_frontend_assets() {
+		if ( ! is_product() && ! is_account_page() ) {
+			return;
+		}
         wp_enqueue_style(
             'holdthisproduct-style',
             HTP_PLUGIN_URL . 'assets/css/style.css',
@@ -96,6 +99,13 @@ class HTP_Frontend {
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'nonce'    => wp_create_nonce( 'holdthisproduct_nonce' ),
             'is_logged_in' => is_user_logged_in() ? 1 : 0,
+			'i18n' => array(
+				'loginRequired' => __( 'Please log in to reserve products.', 'hold-this-product' ),
+				'processing' => __( 'Processing...', 'hold-this-product' ),
+				'success' => __( 'Reservation successful!', 'hold-this-product' ),
+				'error' => __( 'Error:', 'hold-this-product' ),
+				'failed' => __( 'Request failed. Please try again.', 'hold-this-product' ),
+			),
         ) );
     }
     

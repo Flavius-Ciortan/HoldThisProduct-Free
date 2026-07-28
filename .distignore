@@ -1,0 +1,12 @@
+/.git
+/.gitignore
+/.distignore
+/.vscode
+/.wordpress-org
+/tests
+/HoldThisProduct-review.md
+/CHANGELOG.md
+/CONTRIBUTING.md
+/PUBLISH_CHECKLIST.md
+/README.md
+/USER_GUIDE.md
