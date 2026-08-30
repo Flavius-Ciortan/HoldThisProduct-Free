@@ -37,7 +37,7 @@ class HTP_Admin {
         add_menu_page(
 			__( 'Hold This Product Settings', 'hold-this-product' ),
 			__( 'Hold This Product', 'hold-this-product' ),
-            'manage_options',
+            htp_get_manage_capability(),
             'holdthisproduct-settings',
             array( $this, 'settings_page' ),
             HTP_PLUGIN_URL . 'assets/images/HTP-menu-icon.png',
@@ -49,7 +49,7 @@ class HTP_Admin {
             'holdthisproduct-settings',
 			__( 'Settings', 'hold-this-product' ),
 			__( 'Settings', 'hold-this-product' ),
-            'manage_options',
+            htp_get_manage_capability(),
             'holdthisproduct-settings',
             array( $this, 'settings_page' )
         );
@@ -59,7 +59,7 @@ class HTP_Admin {
             'holdthisproduct-settings',
 			__( 'Reservations', 'hold-this-product' ),
 			__( 'Reservations', 'hold-this-product' ),
-            'manage_options',
+            htp_get_manage_capability(),
             'holdthisproduct-manage-reservations',
             $this->reservations_admin ? array( $this->reservations_admin, 'render_page' ) : '__return_null'
         );
@@ -89,6 +89,7 @@ class HTP_Admin {
 			'holdthisproduct_enable_reservation' => __( 'Enable Reservation', 'hold-this-product' ),
 			'holdthisproduct_max_reservations' => __( 'Max Reservations Per User', 'hold-this-product' ),
 			'holdthisproduct_reservation_duration' => __( 'Reservation Duration (hours)', 'hold-this-product' ),
+			'holdthisproduct_pending_duration' => __( 'Approval Request Duration (hours)', 'hold-this-product' ),
 			'holdthisproduct_enable_email_notifications' => __( 'Enable Email Notifications', 'hold-this-product' ),
 			'holdthisproduct_require_admin_approval' => __( 'Require Admin Approval for Reservations', 'hold-this-product' )
         );
@@ -141,10 +142,17 @@ class HTP_Admin {
         }
         $sanitized['reservation_duration'] = $reservation_duration;
 
-        $pending_duration = isset( $input['pending_duration'] )
-            ? (int) $input['pending_duration']
-            : ( isset( $current['pending_duration'] ) ? (int) $current['pending_duration'] : $reservation_duration );
-        $sanitized['pending_duration'] = max( 1, min( 168, $pending_duration ) );
+	        $pending_duration = isset( $input['pending_duration'] )
+	            ? (int) $input['pending_duration']
+	            : ( isset( $current['pending_duration'] ) ? (int) $current['pending_duration'] : $reservation_duration );
+		if ( $pending_duration < 1 ) {
+			$pending_duration = 1;
+			add_settings_error( 'holdthisproduct_options', 'htp_pending_duration_min', __( 'Approval request duration must be at least 1 hour.', 'hold-this-product' ) );
+		} elseif ( $pending_duration > 168 ) {
+			$pending_duration = 168;
+			add_settings_error( 'holdthisproduct_options', 'htp_pending_duration_max', __( 'Approval request duration cannot exceed 168 hours.', 'hold-this-product' ) );
+		}
+	        $sanitized['pending_duration'] = $pending_duration;
 
         $sanitized['popup_customization_logged_in'] = $this->sanitize_popup_customization(
             isset( $input['popup_customization_logged_in'] ) ? $input['popup_customization_logged_in'] : array()
@@ -280,6 +288,20 @@ class HTP_Admin {
                     </div>
                 </div>
                 <p class="description">How long reservations last (1-168 hours, default: 24)</p>
+              </div>';
+    }
+
+    /** Approval request duration field callback. */
+    public function holdthisproduct_pending_duration_callback() {
+        $options = get_option( 'holdthisproduct_options', array() );
+        $value = isset( $options['pending_duration'] ) ? absint( $options['pending_duration'] ) : 24;
+        echo '<div class="htp-setting-field">
+                <div class="htp-setting-control">
+                    <div class="htp-input-right-align">
+                        <input type="number" min="1" max="168" name="holdthisproduct_options[pending_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
+                    </div>
+                </div>
+                <p class="description">How long an approval request remains open. The active reservation duration starts when it is approved.</p>
               </div>';
     }
     

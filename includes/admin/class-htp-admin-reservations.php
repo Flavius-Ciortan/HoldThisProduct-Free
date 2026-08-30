@@ -53,6 +53,7 @@ class HTP_Admin_Reservations {
                     <div><strong>Cancelled:</strong> <?php echo esc_html( $stats['cancelled'] ); ?></div>
                     <div><strong>Fulfilled:</strong> <?php echo esc_html( $stats['fulfilled'] ); ?></div>
                     <div><strong>Denied:</strong> <?php echo esc_html( $stats['denied'] ); ?></div>
+					<div><strong>Order Cancelled:</strong> <?php echo esc_html( $stats['order_cancelled'] ); ?></div>
                     <div><strong>Total:</strong> <?php echo esc_html( $stats['total'] ); ?></div>
                 </div>
             </div>
@@ -67,6 +68,7 @@ class HTP_Admin_Reservations {
                         <option value="cancelled" <?php selected( $status_filter, 'cancelled' ); ?>><?php esc_html_e( 'Cancelled', 'hold-this-product' ); ?></option>
                         <option value="fulfilled" <?php selected( $status_filter, 'fulfilled' ); ?>><?php esc_html_e( 'Fulfilled', 'hold-this-product' ); ?></option>
                         <option value="denied" <?php selected( $status_filter, 'denied' ); ?>><?php esc_html_e( 'Denied', 'hold-this-product' ); ?></option>
+						<option value="order_cancelled" <?php selected( $status_filter, 'order_cancelled' ); ?>><?php esc_html_e( 'Order Cancelled', 'hold-this-product' ); ?></option>
                     </select>
 
                     <select name="search_type" id="search-type">
@@ -331,7 +333,7 @@ class HTP_Admin_Reservations {
     }
 
     public function handle_admin_cancel_reservation() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+	        if ( ! current_user_can( htp_get_manage_capability() ) ) {
             wp_send_json_error( 'Insufficient permissions.' );
         }
 
@@ -347,7 +349,10 @@ class HTP_Admin_Reservations {
             wp_send_json_error( 'Reservation is not active.' );
         }
 
-		$this->get_reservations_handler()->cancel_reservation( $reservation_id );
+			$result = $this->get_reservations_handler()->cancel_reservation( $reservation_id );
+			if ( ! $result ) {
+				wp_send_json_error( 'Reservation changed before it could be cancelled.' );
+			}
 
 		update_post_meta( $reservation_id, '_htp_cancelled_by_admin', time() );
         update_post_meta( $reservation_id, '_htp_cancelled_by_user', get_current_user_id() );
@@ -356,7 +361,7 @@ class HTP_Admin_Reservations {
     }
 
     public function handle_admin_delete_reservation() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+	        if ( ! current_user_can( htp_get_manage_capability() ) ) {
             wp_send_json_error( 'Insufficient permissions.' );
         }
 
@@ -381,7 +386,7 @@ class HTP_Admin_Reservations {
     }
 
     public function handle_approve_reservation() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+	        if ( ! current_user_can( htp_get_manage_capability() ) ) {
             wp_send_json_error( 'Insufficient permissions.' );
         }
 
@@ -409,7 +414,7 @@ class HTP_Admin_Reservations {
     }
 
     public function handle_deny_reservation() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+	        if ( ! current_user_can( htp_get_manage_capability() ) ) {
             wp_send_json_error( 'Insufficient permissions.' );
         }
 
@@ -437,10 +442,11 @@ class HTP_Admin_Reservations {
     }
 
 	private function get_filtered_reservations( $status_filter = 'all', $search_query = '', $search_type = 'email', $page = 1 ) {
-        global $wpdb;
+	        global $wpdb;
 
-        $meta_query = array();
-		$customer_reservation_ids = null;
+	        $meta_query = array();
+			$customer_reservation_ids = null;
+			$force_empty = false;
 
         if ( $status_filter !== 'all' ) {
             $meta_query[] = array(
@@ -466,8 +472,9 @@ class HTP_Admin_Reservations {
                         '%' . $wpdb->esc_like( $search_query ) . '%'
                     ) );
 
-                    if ( empty( $product_ids ) ) {
-                        return array();
+	                    if ( empty( $product_ids ) ) {
+	                        $force_empty = true;
+	                        break;
                     }
 
                     $meta_query[] = array(
@@ -478,8 +485,9 @@ class HTP_Admin_Reservations {
                     break;
 
                 case 'product_id':
-                    if ( ! is_numeric( $search_query ) ) {
-                        return array();
+	                    if ( ! is_numeric( $search_query ) ) {
+	                        $force_empty = true;
+	                        break;
                     }
                     $meta_query[] = array(
                         'key'     => '_htp_product_id',
@@ -506,9 +514,12 @@ class HTP_Admin_Reservations {
         if ( ! empty( $meta_query ) ) {
             $args['meta_query'] = $meta_query;
         }
-		if ( null !== $customer_reservation_ids ) {
-			$args['post__in'] = $customer_reservation_ids ? $customer_reservation_ids : array( 0 );
-		}
+			if ( null !== $customer_reservation_ids ) {
+				$args['post__in'] = $customer_reservation_ids ? $customer_reservation_ids : array( 0 );
+			}
+			if ( $force_empty ) {
+				$args['post__in'] = array( 0 );
+			}
 
 		return new WP_Query( $args );
     }
@@ -583,7 +594,7 @@ class HTP_Admin_Reservations {
 			WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
 			OBJECT_K
 		); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- No external values are interpolated.
-		$summary = array( 'total' => 0, 'pending_approval' => 0, 'active' => 0, 'expired' => 0, 'cancelled' => 0, 'fulfilled' => 0, 'denied' => 0 );
+			$summary = array( 'total' => 0, 'pending_approval' => 0, 'active' => 0, 'expired' => 0, 'cancelled' => 0, 'fulfilled' => 0, 'denied' => 0, 'order_cancelled' => 0 );
 		foreach ( (array) $rows as $status => $row ) {
 			if ( isset( $summary[ $status ] ) ) {
 				$summary[ $status ] = (int) $row->reservation_count;
@@ -626,7 +637,7 @@ class HTP_Admin_Reservations {
 
         $time_left  = '—';
         $time_class = '';
-        if ( $expires_ts && $status === 'active' ) {
+	        if ( $expires_ts && in_array( $status, array( 'active', 'pending_approval' ), true ) ) {
 			$diff = $expires_ts - time();
             if ( $diff > 0 ) {
                 $days    = floor( $diff / DAY_IN_SECONDS );
@@ -653,7 +664,7 @@ class HTP_Admin_Reservations {
         }
 
         $status_class   = 'status-' . str_replace( '_', '-', $status );
-        $status_display = str_replace( '_', ' ', ucfirst( $status ) );
+	        $status_display = ucwords( str_replace( '_', ' ', $status ) );
 
         echo '<tr>';
         echo '<td>';

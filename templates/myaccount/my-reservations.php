@@ -55,14 +55,14 @@ if ( ! defined( 'ABSPATH' ) ) {
             $is_active  = ( $status === 'active' );
             $is_expired = ( $status === 'expired' );
 
-            $expires_disp = ( ( $is_active || $is_expired ) && $expires_ts )
+	            $expires_disp = ( ( $is_active || $is_pending || $is_expired ) && $expires_ts )
 				? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $expires_ts )
                 : '—';
             
             // Calculate time left
             $time_left = '';
             $urgency_class = '';
-            if ( $is_active && $expires_ts ) {
+	            if ( ( $is_active || $is_pending ) && $expires_ts ) {
 				$diff = $expires_ts - time();
                 if ( $diff > 0 ) {
                     $days = floor( $diff / DAY_IN_SECONDS );
@@ -98,18 +98,20 @@ if ( ! defined( 'ABSPATH' ) ) {
                 }
             }
             
-            if ( $is_pending ) {
-                $time_left = esc_html__( 'Awaiting approval', 'hold-this-product' );
-                $urgency_class = 'pending';
+	            if ( $is_pending ) {
+	                $urgency_class = 'pending';
             } elseif ( $status === 'fulfilled' ) {
                 $time_left = esc_html__( 'Purchased', 'hold-this-product' );
                 $urgency_class = 'fulfilled';
             } elseif ( $status === 'denied' ) {
                 $time_left = esc_html__( 'Denied', 'hold-this-product' );
                 $urgency_class = 'denied';
-            } elseif ( $status === 'cancelled' ) {
-                $time_left = esc_html__( 'Cancelled', 'hold-this-product' );
-                $urgency_class = 'cancelled';
+	            } elseif ( $status === 'cancelled' ) {
+	                $time_left = esc_html__( 'Cancelled', 'hold-this-product' );
+	                $urgency_class = 'cancelled';
+	            } elseif ( $status === 'order_cancelled' ) {
+	                $time_left = esc_html__( 'Order cancelled', 'hold-this-product' );
+	                $urgency_class = 'cancelled';
             } elseif ( $is_expired ) {
                 $time_left = esc_html__( 'Expired', 'hold-this-product' );
                 $urgency_class = 'expired';
@@ -124,7 +126,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                 'fulfilled'        => esc_html__( 'Purchased', 'hold-this-product' ),
                 'expired'          => esc_html__( 'Expired', 'hold-this-product' ),
                 'cancelled'        => esc_html__( 'Cancelled', 'hold-this-product' ),
-                'denied'           => esc_html__( 'Denied', 'hold-this-product' ),
+	                'denied'           => esc_html__( 'Denied', 'hold-this-product' ),
+	                'order_cancelled'  => esc_html__( 'Order cancelled', 'hold-this-product' ),
             );
             $status_label = $status_map[ $status ] ?? esc_html__( 'Unknown', 'hold-this-product' );
 
@@ -141,7 +144,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                 case 'denied':
                     $badge_variant = 'denied';
                     break;
-                case 'cancelled':
+	                case 'cancelled':
+	                case 'order_cancelled':
                     $badge_variant = 'cancelled';
                     break;
                 case 'expired':
@@ -169,7 +173,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </span>
                 </td>
                 <td class="woocommerce-orders-table__cell woocommerce-orders-table__cell-order-expires" data-title="<?php esc_attr_e( 'Expires', 'hold-this-product' ); ?>">
-                    <?php if ( ( $is_active || $is_expired ) && $expires_ts ) : ?>
+	                    <?php if ( ( $is_active || $is_pending || $is_expired ) && $expires_ts ) : ?>
 						<time datetime="<?php echo esc_attr( gmdate( DATE_ATOM, $expires_ts ) ); ?>">
                             <?php echo esc_html( $expires_disp ); ?>
                         </time>

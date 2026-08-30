@@ -19,7 +19,8 @@ if ( ! $product instanceof WC_Product ) {
 }
 
 $pid = $product->get_id();
-$options = get_option( 'holdthisproduct_options' );
+$options = get_option( 'holdthisproduct_options', array() );
+$options = is_array( $options ) ? $options : array();
 
 // Reservation duration (hours)
 $duration_hours = isset( $options['reservation_duration'] ) ? absint( $options['reservation_duration'] ) : 24;
@@ -28,6 +29,9 @@ if ( $duration_hours < 1 ) {
 } elseif ( $duration_hours > 168 ) {
     $duration_hours = 168;
 }
+$requires_approval = ! empty( $options['require_admin_approval'] );
+$pending_duration_hours = isset( $options['pending_duration'] ) ? absint( $options['pending_duration'] ) : $duration_hours;
+$pending_duration_hours = max( 1, min( 168, $pending_duration_hours ) );
 
 // Popup customization settings (logged-in only).
 $enable_popup_customization = ! empty( $options['enable_popup_customization_logged_in'] );
@@ -71,14 +75,23 @@ if ( $enable_popup_customization ) {
             <div class="htp-reservation-notice" aria-live="polite" style="display: none;"></div>
 
 			<p><strong><?php esc_html_e( 'Reserve this product', 'hold-this-product' ); ?></strong></p>
-            <p>
-				<?php
-                printf(
-					/* translators: %d: reservation duration in hours. */
-					esc_html( _n( 'Are you sure you want to reserve this product for %d hour?', 'Are you sure you want to reserve this product for %d hours?', $duration_hours, 'hold-this-product' ) ),
-					(int) $duration_hours
-                );
-                ?>
+	            <p>
+					<?php
+					if ( $requires_approval ) {
+						printf(
+							/* translators: 1: approval request duration in hours, 2: active reservation duration in hours. */
+							esc_html__( 'Your request will remain open for up to %1$d hours. If approved, the product will then be held for %2$d hours.', 'hold-this-product' ),
+							(int) $pending_duration_hours,
+							(int) $duration_hours
+						);
+					} else {
+						printf(
+							/* translators: %d: reservation duration in hours. */
+							esc_html( _n( 'Are you sure you want to reserve this product for %d hour?', 'Are you sure you want to reserve this product for %d hours?', $duration_hours, 'hold-this-product' ) ),
+							(int) $duration_hours
+						);
+					}
+	                ?>
             </p>
 
 			<button type="submit" class="submit-btn htp-button-primary"><?php esc_html_e( 'Yes, Reserve', 'hold-this-product' ); ?></button>

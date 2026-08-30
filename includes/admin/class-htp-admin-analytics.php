@@ -32,7 +32,7 @@ class HTP_Analytics {
             'holdthisproduct-settings',
 			__( 'Reservation Analytics', 'hold-this-product' ),
 			__( 'Analytics', 'hold-this-product' ),
-            'manage_options',
+            htp_get_manage_capability(),
             'holdthisproduct-analytics',
             array( $this, 'analytics_page' )
         );
@@ -104,6 +104,11 @@ class HTP_Analytics {
 					<h3><?php esc_html_e( 'Denied Reservations', 'hold-this-product' ); ?></h3>
                     <p style="font-size: 32px; margin: 0; color: #991b1b;"><?php echo esc_html( $stats['denied'] ); ?></p>
                 </div>
+
+                <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+					<h3><?php esc_html_e( 'Cancelled Orders', 'hold-this-product' ); ?></h3>
+                    <p style="font-size: 32px; margin: 0; color: #7c3aed;"><?php echo esc_html( $stats['order_cancelled'] ); ?></p>
+                </div>
                 
                 <div class="htp-stat-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
 					<h3><?php esc_html_e( 'Conversion Rate', 'hold-this-product' ); ?></h3>
@@ -132,7 +137,7 @@ class HTP_Analytics {
     private function get_reservation_stats() {
         global $wpdb;
 		$rows = $wpdb->get_results( "SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_htp_status' WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value", OBJECT_K ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- No external values.
-		$stats = array( 'total' => 0, 'active' => 0, 'pending_approval' => 0, 'expired' => 0, 'fulfilled' => 0, 'cancelled' => 0, 'denied' => 0 );
+			$stats = array( 'total' => 0, 'active' => 0, 'pending_approval' => 0, 'expired' => 0, 'fulfilled' => 0, 'cancelled' => 0, 'denied' => 0, 'order_cancelled' => 0 );
 		foreach ( (array) $rows as $status => $row ) {
 			if ( isset( $stats[ $status ] ) ) {
 				$stats[ $status ] = (int) $row->reservation_count;

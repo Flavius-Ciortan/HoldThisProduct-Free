@@ -25,10 +25,23 @@ function htp_assert( $condition, $message ) {
 $htp_plugin = HoldThisProduct::get_instance();
 $htp_original_options = get_option( 'holdthisproduct_options', false );
 htp_assert( $htp_plugin->reservations instanceof HTP_Reservations, 'Reservation service initialized.' );
+htp_assert( post_type_exists( 'htp_reservation' ), 'Reservation post type is registered during normal bootstrap.' );
+
+wp_clear_scheduled_hook( HTP_Reservations::CRON_HOOK );
+htp_assert( ! wp_next_scheduled( HTP_Reservations::CRON_HOOK ), 'Expiration schedule can be removed for recovery test.' );
+$htp_plugin->reservations->schedule_expiration();
+htp_assert( (bool) wp_next_scheduled( HTP_Reservations::CRON_HOOK ), 'Missing expiration schedule is recreated.' );
 
 require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin-reservations.php';
 require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin.php';
 $htp_admin = new HTP_Admin( $htp_plugin->reservations );
+$htp_admin_reservations = new HTP_Admin_Reservations( $htp_plugin->reservations );
+$htp_filtered_method = new ReflectionMethod( $htp_admin_reservations, 'get_filtered_reservations' );
+$htp_invalid_product_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'not-a-number', 'product_id', 1 );
+$htp_missing_product_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'HTP product that cannot exist 19f546ef', 'product', 1 );
+htp_assert( $htp_invalid_product_query instanceof WP_Query && 0 === (int) $htp_invalid_product_query->found_posts, 'Invalid product ID search returns an empty WP_Query.' );
+htp_assert( $htp_missing_product_query instanceof WP_Query && 0 === (int) $htp_missing_product_query->found_posts, 'Missing product search returns an empty WP_Query.' );
+htp_assert( get_role( 'shop_manager' ) && get_role( 'shop_manager' )->has_cap( htp_get_manage_capability() ), 'Shop Managers have the reservation management capability.' );
 $htp_sanitized = $htp_admin->sanitize_options( array( 'max_reservations' => 999, 'reservation_duration' => -2, 'popup_customization_logged_in' => array( 'font_family' => 'Arial;background:url(x)', 'background_color' => 'bad' ) ) );
 htp_assert( 100 === $htp_sanitized['max_reservations'], 'Reservation limit is bounded.' );
 htp_assert( 1 === $htp_sanitized['reservation_duration'], 'Duration is bounded.' );
@@ -63,6 +76,23 @@ $htp_product->set_manage_stock( true );
 $htp_product->set_stock_quantity( 1 );
 $htp_product_id = $htp_product->save();
 
+$htp_immediate_product = new WC_Product_Simple();
+$htp_immediate_product->set_name( 'Immediate reservation test product' );
+$htp_immediate_product->set_status( 'publish' );
+$htp_immediate_product->set_regular_price( '10' );
+$htp_immediate_product->set_manage_stock( true );
+$htp_immediate_product->set_stock_quantity( 2 );
+$htp_immediate_product_id = $htp_immediate_product->save();
+update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 0, 'enable_email_notifications' => 0 ) );
+$htp_immediate_id = $htp_plugin->reservations->create_reservation( $htp_immediate_product_id, $htp_user_id );
+htp_assert( $htp_immediate_id && 'active' === get_post_meta( $htp_immediate_id, '_htp_status', true ), 'Immediate reservation activates through the inventory transaction.' );
+htp_assert( HTP_Inventory_Manager::STATE_HELD === get_post_meta( $htp_immediate_id, HTP_Inventory_Manager::META_STATE, true ), 'Immediate reservation records held inventory ownership.' );
+htp_assert( 1 === (int) wc_get_product( $htp_immediate_product_id )->get_stock_quantity( 'edit' ), 'Immediate reservation decreases stock once.' );
+htp_assert( $htp_plugin->reservations->cancel_reservation( $htp_immediate_id ), 'Immediate reservation can be cancelled.' );
+htp_assert( HTP_Inventory_Manager::STATE_RELEASED === get_post_meta( $htp_immediate_id, HTP_Inventory_Manager::META_STATE, true ), 'Cancellation records released inventory ownership.' );
+htp_assert( 2 === (int) wc_get_product( $htp_immediate_product_id )->get_stock_quantity( 'edit' ), 'Transactional cancellation restores immediate reservation stock.' );
+update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 1, 'enable_email_notifications' => 0 ) );
+
 function htp_test_reservation( $product_id, $user_id, $status, $expires ) {
 	$id = wp_insert_post( array( 'post_type' => 'htp_reservation', 'post_status' => 'publish', 'post_author' => $user_id, 'post_title' => 'Test reservation' ) );
 	update_post_meta( $id, '_htp_product_id', $product_id );
@@ -77,20 +107,28 @@ $htp_pending_id = htp_test_reservation( $htp_product_id, $htp_user_id, 'pending_
 htp_assert( true === $htp_plugin->reservations->approve_reservation( $htp_pending_id ), 'Pending reservation approves.' );
 $htp_product = wc_get_product( $htp_product_id );
 htp_assert( 0 === (int) $htp_product->get_stock_quantity( 'edit' ), 'Approval holds physical stock once.' );
+htp_assert( HTP_Inventory_Manager::STATE_HELD === get_post_meta( $htp_pending_id, HTP_Inventory_Manager::META_STATE, true ), 'Approval records held inventory ownership.' );
 htp_assert( 1 === (int) $htp_product->get_stock_quantity(), 'Owner can purchase the held last unit.' );
 htp_assert( is_wp_error( $htp_plugin->reservations->approve_reservation( $htp_pending_id ) ), 'Repeated approval is rejected.' );
 htp_assert( true === $htp_plugin->reservations->cancel_reservation( $htp_pending_id ), 'Active reservation cancels.' );
 htp_assert( false === $htp_plugin->reservations->cancel_reservation( $htp_pending_id ), 'Repeated cancellation is rejected.' );
 $htp_product = wc_get_product( $htp_product_id );
 htp_assert( 1 === (int) $htp_product->get_stock_quantity( 'edit' ), 'Cancellation restores stock exactly once.' );
+htp_assert( HTP_Inventory_Manager::STATE_RELEASED === get_post_meta( $htp_pending_id, HTP_Inventory_Manager::META_STATE, true ), 'Cancellation records released inventory ownership.' );
 
 $htp_expired_pending = htp_test_reservation( $htp_product_id, $htp_user_id, 'pending_approval', time() - 1 );
+htp_assert( 0 === $htp_plugin->reservations->count_open_reservations( $htp_user_id ), 'Expired pending requests do not consume reservation quota.' );
 $htp_plugin->reservations->expire_old_reservations();
 htp_assert( 'expired' === get_post_meta( $htp_expired_pending, '_htp_status', true ), 'Pending requests expire.' );
 htp_assert( 1 === (int) wc_get_product( $htp_product_id )->get_stock_quantity( 'edit' ), 'Pending expiry does not change stock.' );
 
+$htp_cart = new WC_Cart();
+$htp_cart_item_key = $htp_cart->add_to_cart( $htp_product_id, 1 );
+htp_assert( $htp_cart_item_key && empty( $htp_cart->cart_contents[ $htp_cart_item_key ]['_htp_reservation_id'] ), 'Cart item added before reservation starts unlinked.' );
 $htp_active_id = htp_test_reservation( $htp_product_id, $htp_user_id, 'active', time() + HOUR_IN_SECONDS );
 wc_update_product_stock( wc_get_product( $htp_product_id ), 1, 'decrease' );
+$htp_plugin->reservations->sync_cart_reservations( $htp_cart );
+htp_assert( $htp_active_id === (int) $htp_cart->cart_contents[ $htp_cart_item_key ]['_htp_reservation_id'], 'Existing cart item is linked after the reservation is created.' );
 $htp_order = wc_create_order( array( 'customer_id' => $htp_user_id ) );
 $htp_item_id = $htp_order->add_product( wc_get_product( $htp_product_id ), 1 );
 $htp_item = $htp_order->get_item( $htp_item_id );
@@ -108,17 +146,42 @@ try {
 htp_assert( $htp_reserve_stock_succeeded, 'WooCommerce checkout can reserve stock when the last unit is already held. ' . $htp_reserve_stock_message );
 do_action( 'woocommerce_store_api_checkout_order_processed', $htp_order );
 htp_assert( 'fulfilled' === get_post_meta( $htp_active_id, '_htp_status', true ), 'Order fulfills the exact linked reservation.' );
+htp_assert( HTP_Inventory_Manager::STATE_TRANSFERRED === get_post_meta( $htp_active_id, HTP_Inventory_Manager::META_STATE, true ), 'Fulfillment transfers inventory ownership to the order.' );
 htp_assert( 0 === (int) wc_get_product( $htp_product_id )->get_stock_quantity( 'edit' ), 'Checkout does not decrement the held unit twice.' );
 $htp_order->update_status( 'cancelled' );
 htp_assert( 1 === (int) wc_get_product( $htp_product_id )->get_stock_quantity( 'edit' ), 'Cancelled order restores stock exactly once.' );
+htp_assert( 'order_cancelled' === get_post_meta( $htp_active_id, '_htp_status', true ), 'Cancelled order has an explicit reservation status.' );
+htp_assert( HTP_Inventory_Manager::STATE_RELEASED === get_post_meta( $htp_active_id, HTP_Inventory_Manager::META_STATE, true ), 'Cancelled order records released inventory ownership.' );
 $htp_plugin->reservations->restore_transferred_order_stock( $htp_order->get_id() );
 htp_assert( 1 === (int) wc_get_product( $htp_product_id )->get_stock_quantity( 'edit' ), 'Repeated order restoration is idempotent.' );
+
+require_once ABSPATH . 'wp-admin/includes/user.php';
+$htp_privacy_user_id = wp_insert_user( array( 'user_login' => 'htp-privacy-user', 'user_pass' => wp_generate_password( 24 ), 'user_email' => 'htp-privacy@example.test', 'role' => 'customer' ) );
+$htp_privacy_ids = array();
+for ( $htp_i = 0; $htp_i < 101; $htp_i++ ) {
+	$htp_privacy_ids[] = htp_test_reservation( $htp_product_id, $htp_privacy_user_id, 'expired', time() - HOUR_IN_SECONDS );
+}
+$htp_erase_first = $htp_plugin->reservations->erase_personal_data( 'htp-privacy@example.test', 1 );
+$htp_erase_second = $htp_plugin->reservations->erase_personal_data( 'htp-privacy@example.test', 2 );
+$htp_privacy_remaining = get_posts( array( 'post_type' => 'htp_reservation', 'post_status' => 'publish', 'author' => $htp_privacy_user_id, 'fields' => 'ids', 'posts_per_page' => -1 ) );
+htp_assert( ! $htp_erase_first['done'] && $htp_erase_second['done'] && empty( $htp_privacy_remaining ), 'Privacy eraser processes a shrinking result set without skipping records.' );
+
+$htp_delete_user_id = wp_insert_user( array( 'user_login' => 'htp-delete-user', 'user_pass' => wp_generate_password( 24 ), 'user_email' => 'htp-delete@example.test', 'role' => 'customer' ) );
+$htp_delete_reservation_id = htp_test_reservation( $htp_product_id, $htp_delete_user_id, 'active', time() + HOUR_IN_SECONDS );
+wp_delete_user( $htp_delete_user_id );
+htp_assert( 'htp_reservation' === get_post_type( $htp_delete_reservation_id ), 'Deleting a customer does not delete a reservation with an inventory obligation.' );
 
 wp_delete_post( $htp_pending_id, true );
 wp_delete_post( $htp_expired_pending, true );
 wp_delete_post( $htp_active_id, true );
+wp_delete_post( $htp_immediate_id, true );
+foreach ( $htp_privacy_ids as $htp_privacy_id ) {
+	wp_delete_post( $htp_privacy_id, true );
+}
+wp_delete_post( $htp_delete_reservation_id, true );
 wp_delete_post( $htp_product_id, true );
-require_once ABSPATH . 'wp-admin/includes/user.php';
+wp_delete_post( $htp_immediate_product_id, true );
+wp_delete_user( $htp_privacy_user_id );
 wp_delete_user( $htp_user_id );
 if ( false === $htp_original_options ) {
 	delete_option( 'holdthisproduct_options' );
