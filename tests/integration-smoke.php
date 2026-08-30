@@ -3,7 +3,13 @@ if ( ! defined( 'HTP_INTEGRATION_TEST' ) ) {
 	exit;
 }
 
-require '/wordpress/wp-load.php';
+if ( ! defined( 'ABSPATH' ) ) {
+	$wp_load = dirname( __DIR__, 4 ) . '/wp-load.php';
+	if ( ! file_exists( $wp_load ) ) {
+		$wp_load = '/wordpress/wp-load.php';
+	}
+	require $wp_load;
+}
 
 $htp_failures = array();
 function htp_assert( $condition, $message ) {
@@ -17,6 +23,7 @@ function htp_assert( $condition, $message ) {
 }
 
 $htp_plugin = HoldThisProduct::get_instance();
+$htp_original_options = get_option( 'holdthisproduct_options', false );
 htp_assert( $htp_plugin->reservations instanceof HTP_Reservations, 'Reservation service initialized.' );
 
 require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin-reservations.php';
@@ -26,8 +33,26 @@ $htp_sanitized = $htp_admin->sanitize_options( array( 'max_reservations' => 999,
 htp_assert( 100 === $htp_sanitized['max_reservations'], 'Reservation limit is bounded.' );
 htp_assert( 1 === $htp_sanitized['reservation_duration'], 'Duration is bounded.' );
 htp_assert( 'Arial, Helvetica, sans-serif' === $htp_sanitized['popup_customization_logged_in']['font_family'], 'Font value is allowlisted.' );
+$htp_sanitized = $htp_admin->sanitize_options( array(
+	'max_reservations' => 0,
+	'reservation_duration' => 999,
+	'popup_customization_logged_in' => array(
+		'border_radius' => -10,
+		'font_size' => 999,
+		'background_color' => 'invalid',
+		'text_color' => '#123456',
+	),
+) );
+htp_assert( 1 === $htp_sanitized['max_reservations'], 'Zero reservation limit is raised to one.' );
+htp_assert( 168 === $htp_sanitized['reservation_duration'], 'Excessive duration is capped.' );
+htp_assert( 0 === $htp_sanitized['popup_customization_logged_in']['border_radius'], 'Negative border radius is raised to zero.' );
+htp_assert( 40 === $htp_sanitized['popup_customization_logged_in']['font_size'], 'Excessive font size is capped.' );
+htp_assert( '#ffffff' === $htp_sanitized['popup_customization_logged_in']['background_color'], 'Invalid popup color uses the default.' );
+htp_assert( ! empty( get_settings_errors( 'holdthisproduct_options' ) ), 'Corrected settings produce validation feedback.' );
 
 update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 1, 'enable_email_notifications' => 0 ) );
+$htp_preserved = $htp_admin->sanitize_options( array( 'max_reservations' => 3, 'reservation_duration' => 12 ) );
+htp_assert( 1 === $htp_preserved['pending_duration'], 'Hidden pending duration is preserved when settings are saved.' );
 $htp_user_id = wp_insert_user( array( 'user_login' => 'htp-test-user', 'user_pass' => wp_generate_password( 24 ), 'user_email' => 'htp@example.test', 'role' => 'customer' ) );
 wp_set_current_user( $htp_user_id );
 $htp_product = new WC_Product_Simple();
@@ -95,5 +120,10 @@ wp_delete_post( $htp_active_id, true );
 wp_delete_post( $htp_product_id, true );
 require_once ABSPATH . 'wp-admin/includes/user.php';
 wp_delete_user( $htp_user_id );
+if ( false === $htp_original_options ) {
+	delete_option( 'holdthisproduct_options' );
+} else {
+	update_option( 'holdthisproduct_options', $htp_original_options );
+}
 if ( $htp_failures ) exit( 1 );
 echo esc_html( "All integration assertions passed.\n" );

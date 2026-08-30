@@ -69,7 +69,14 @@ class HTP_Admin {
      * Initialize settings
      */
     public function init_settings() {
-		register_setting( 'holdthisproduct_options_group', 'holdthisproduct_options', array( 'sanitize_callback' => array( $this, 'sanitize_options' ) ) );
+        register_setting(
+            'holdthisproduct_options_group',
+            'holdthisproduct_options',
+            array(
+                'sanitize_callback' => array( $this, 'sanitize_options' ),
+                'default'           => array(),
+            )
+        );
         
         add_settings_section(
             'holdthisproduct_settings_section',
@@ -97,41 +104,137 @@ class HTP_Admin {
         }
     }
 
-	/** Validate the existing settings form without changing its fields or layout. */
-	public function sanitize_options( $input ) {
-		$input = is_array( $input ) ? $input : array();
-		$popup = isset( $input['popup_customization_logged_in'] ) && is_array( $input['popup_customization_logged_in'] ) ? $input['popup_customization_logged_in'] : array();
-		$allowed_fonts = array(
-			'Arial, Helvetica, sans-serif', 'Verdana, Geneva, sans-serif', 'Georgia, serif',
-			'Times New Roman, Times, serif', 'Tahoma, Geneva, sans-serif',
-			'Trebuchet MS, Helvetica, sans-serif', 'Courier New, Courier, monospace',
-			'Roboto, sans-serif', 'Open Sans, sans-serif', 'Lato, sans-serif', 'Montserrat, sans-serif',
-		);
-		$font = isset( $popup['font_family'] ) ? sanitize_text_field( $popup['font_family'] ) : 'Arial, Helvetica, sans-serif';
-		if ( ! in_array( $font, $allowed_fonts, true ) ) {
-			$font = 'Arial, Helvetica, sans-serif';
-		}
-		$background = sanitize_hex_color( isset( $popup['background_color'] ) ? $popup['background_color'] : '' );
-		$text = sanitize_hex_color( isset( $popup['text_color'] ) ? $popup['text_color'] : '' );
-		$reservation_duration = max( 1, min( 168, intval( isset( $input['reservation_duration'] ) ? $input['reservation_duration'] : 24 ) ) );
+    /**
+     * Sanitize plugin options before saving.
+     *
+     * @param array $input Raw option input.
+     * @return array
+     */
+    public function sanitize_options( $input ) {
+        $input     = is_array( $input ) ? $input : array();
+        $current   = get_option( 'holdthisproduct_options', array() );
+        $current   = is_array( $current ) ? $current : array();
+        $sanitized = array();
 
-		return array(
-			'enable_reservation' => empty( $input['enable_reservation'] ) ? 0 : 1,
-			'max_reservations' => max( 1, min( 100, absint( isset( $input['max_reservations'] ) ? $input['max_reservations'] : 1 ) ) ),
-			'reservation_duration' => $reservation_duration,
-			'pending_duration' => max( 1, min( 168, intval( isset( $input['pending_duration'] ) ? $input['pending_duration'] : $reservation_duration ) ) ),
-			'enable_email_notifications' => empty( $input['enable_email_notifications'] ) ? 0 : 1,
-			'require_admin_approval' => empty( $input['require_admin_approval'] ) ? 0 : 1,
-			'enable_popup_customization_logged_in' => empty( $input['enable_popup_customization_logged_in'] ) ? 0 : 1,
-			'popup_customization_logged_in' => array(
-				'border_radius' => max( 0, min( 50, absint( isset( $popup['border_radius'] ) ? $popup['border_radius'] : 12 ) ) ),
-				'background_color' => $background ? $background : '#ffffff',
-				'font_family' => $font,
-				'font_size' => max( 10, min( 40, absint( isset( $popup['font_size'] ) ? $popup['font_size'] : 16 ) ) ),
-				'text_color' => $text ? $text : '#222222',
-			),
-		);
-	}
+        $sanitized['enable_reservation']              = ! empty( $input['enable_reservation'] ) ? 1 : 0;
+        $sanitized['enable_email_notifications']      = ! empty( $input['enable_email_notifications'] ) ? 1 : 0;
+        $sanitized['require_admin_approval']          = ! empty( $input['require_admin_approval'] ) ? 1 : 0;
+        $sanitized['enable_popup_customization_logged_in'] = ! empty( $input['enable_popup_customization_logged_in'] ) ? 1 : 0;
+
+        $max_reservations = isset( $input['max_reservations'] ) ? (int) $input['max_reservations'] : 1;
+        if ( $max_reservations < 1 ) {
+            $max_reservations = 1;
+            add_settings_error( 'holdthisproduct_options', 'htp_max_reservations', __( 'Max reservations must be at least 1.', 'hold-this-product' ) );
+        } elseif ( $max_reservations > 100 ) {
+            $max_reservations = 100;
+            add_settings_error( 'holdthisproduct_options', 'htp_max_reservations_max', __( 'Max reservations cannot exceed 100.', 'hold-this-product' ) );
+        }
+        $sanitized['max_reservations'] = $max_reservations;
+
+        $reservation_duration = isset( $input['reservation_duration'] ) ? (int) $input['reservation_duration'] : 24;
+        if ( $reservation_duration < 1 ) {
+            $reservation_duration = 1;
+            add_settings_error( 'holdthisproduct_options', 'htp_duration_min', __( 'Reservation duration must be at least 1 hour.', 'hold-this-product' ) );
+        } elseif ( $reservation_duration > 168 ) {
+            $reservation_duration = 168;
+            add_settings_error( 'holdthisproduct_options', 'htp_duration_max', __( 'Reservation duration cannot exceed 168 hours.', 'hold-this-product' ) );
+        }
+        $sanitized['reservation_duration'] = $reservation_duration;
+
+        $pending_duration = isset( $input['pending_duration'] )
+            ? (int) $input['pending_duration']
+            : ( isset( $current['pending_duration'] ) ? (int) $current['pending_duration'] : $reservation_duration );
+        $sanitized['pending_duration'] = max( 1, min( 168, $pending_duration ) );
+
+        $sanitized['popup_customization_logged_in'] = $this->sanitize_popup_customization(
+            isset( $input['popup_customization_logged_in'] ) ? $input['popup_customization_logged_in'] : array()
+        );
+
+        return $sanitized;
+    }
+
+    /**
+     * Sanitize popup customization settings.
+     *
+     * @param array $settings Raw popup settings.
+     * @return array
+     */
+    private function sanitize_popup_customization( $settings ) {
+        $settings      = is_array( $settings ) ? $settings : array();
+        $allowed_fonts = $this->get_popup_font_choices();
+
+        $raw_border_radius = isset( $settings['border_radius'] ) ? (int) $settings['border_radius'] : 12;
+        $raw_font_size     = isset( $settings['font_size'] ) ? (int) $settings['font_size'] : 16;
+        $border_radius = isset( $settings['border_radius'] ) ? (int) $settings['border_radius'] : 12;
+        $font_size     = isset( $settings['font_size'] ) ? (int) $settings['font_size'] : 16;
+        $border_radius = max( 0, min( 50, $border_radius ) );
+        $font_size     = max( 10, min( 40, $font_size ) );
+
+        if ( $raw_border_radius !== $border_radius ) {
+            add_settings_error( 'holdthisproduct_options', 'htp_popup_border_radius', __( 'Popup border radius must be between 0 and 50 pixels.', 'hold-this-product' ) );
+        }
+
+        if ( $raw_font_size !== $font_size ) {
+            add_settings_error( 'holdthisproduct_options', 'htp_popup_font_size', __( 'Popup font size must be between 10 and 40 pixels.', 'hold-this-product' ) );
+        }
+
+        $background_color = $this->sanitize_hex_color_or_default( $settings['background_color'] ?? '', '#ffffff' );
+        $text_color       = $this->sanitize_hex_color_or_default( $settings['text_color'] ?? '', '#222222' );
+        $font_family      = isset( $settings['font_family'] ) ? sanitize_text_field( $settings['font_family'] ) : '';
+
+        if ( isset( $settings['background_color'] ) && $background_color !== $settings['background_color'] ) {
+            add_settings_error( 'holdthisproduct_options', 'htp_popup_background_color', __( 'Popup background color was invalid and has been reset to the default.', 'hold-this-product' ) );
+        }
+
+        if ( isset( $settings['text_color'] ) && $text_color !== $settings['text_color'] ) {
+            add_settings_error( 'holdthisproduct_options', 'htp_popup_text_color', __( 'Popup text color was invalid and has been reset to the default.', 'hold-this-product' ) );
+        }
+
+        if ( '' !== $font_family && ! isset( $allowed_fonts[ $font_family ] ) ) {
+            add_settings_error( 'holdthisproduct_options', 'htp_popup_font_family', __( 'Popup font family was invalid and has been reset to the default.', 'hold-this-product' ) );
+        }
+
+        return array(
+            'border_radius'   => $border_radius,
+            'background_color'=> $background_color,
+            'font_family'     => isset( $allowed_fonts[ $font_family ] ) ? $font_family : 'Arial, Helvetica, sans-serif',
+            'font_size'       => $font_size,
+            'text_color'      => $text_color,
+        );
+    }
+
+    /**
+     * Sanitize a color value with fallback.
+     *
+     * @param string $value Raw color.
+     * @param string $default Default color.
+     * @return string
+     */
+    private function sanitize_hex_color_or_default( $value, $default ) {
+        $sanitized = sanitize_hex_color( $value );
+        return $sanitized ? $sanitized : $default;
+    }
+
+    /**
+     * Get supported popup font choices.
+     *
+     * @return array<string,string>
+     */
+    private function get_popup_font_choices() {
+        return array(
+            'Arial, Helvetica, sans-serif'        => 'Arial',
+            'Verdana, Geneva, sans-serif'         => 'Verdana',
+            'Georgia, serif'                      => 'Georgia',
+            'Times New Roman, Times, serif'       => 'Times New Roman',
+            'Tahoma, Geneva, sans-serif'          => 'Tahoma',
+            'Trebuchet MS, Helvetica, sans-serif' => 'Trebuchet MS',
+            'Courier New, Courier, monospace'     => 'Courier New',
+            'Roboto, sans-serif'                  => 'Roboto (Google)',
+            'Open Sans, sans-serif'               => 'Open Sans (Google)',
+            'Lato, sans-serif'                    => 'Lato (Google)',
+            'Montserrat, sans-serif'              => 'Montserrat (Google)',
+        );
+    }
     
     /**
      * Enable reservation field callback
@@ -158,7 +261,7 @@ class HTP_Admin {
         $value = isset( $options['max_reservations'] ) ? absint( $options['max_reservations'] ) : 1;
         echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
-                    <input type="number" min="1" name="holdthisproduct_options[max_reservations]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
+                    <input type="number" name="holdthisproduct_options[max_reservations]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
                 </div>
                 <p class="description">Limit how many active reservations a user can have at once.</p>
               </div>';
@@ -173,7 +276,7 @@ class HTP_Admin {
         echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <div class="htp-input-right-align">
-                        <input type="number" min="1" max="168" name="holdthisproduct_options[reservation_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
+                        <input type="number" name="holdthisproduct_options[reservation_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
                     </div>
                 </div>
                 <p class="description">How long reservations last (1-168 hours, default: 24)</p>
@@ -253,6 +356,7 @@ class HTP_Admin {
 
             <!-- Main Content -->
             <div class="htp-admin-content">
+                <?php settings_errors( 'holdthisproduct_options' ); ?>
                 <!-- Navigation Tabs -->
                 <div class="htp-nav-wrapper">
                     <div class="htp-nav-tabs">
@@ -318,7 +422,7 @@ class HTP_Admin {
                                         <table class="form-table">
                                             <tr>
 												<th scope="row"><?php esc_html_e( 'Border Radius (px)', 'hold-this-product' ); ?></th>
-                                                <td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][border_radius]" value="<?php echo esc_attr($popup_settings_logged_in['border_radius'] ?? '12'); ?>" min="0" max="50" class="htp-input-right-align"></td>
+                                                <td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][border_radius]" value="<?php echo esc_attr($popup_settings_logged_in['border_radius'] ?? '12'); ?>" class="htp-input-right-align"></td>
                                             </tr>
                                             <tr>
 												<th scope="row"><?php esc_html_e( 'Background Color', 'hold-this-product' ); ?></th>
@@ -329,19 +433,7 @@ class HTP_Admin {
                                                 <td>
                                                     <select name="holdthisproduct_options[popup_customization_logged_in][font_family]" class="htp-input-right-align">
                                                         <?php
-                                                        $fonts = [
-                                                            'Arial, Helvetica, sans-serif' => 'Arial',
-                                                            'Verdana, Geneva, sans-serif' => 'Verdana',
-                                                            'Georgia, serif' => 'Georgia',
-                                                            'Times New Roman, Times, serif' => 'Times New Roman',
-                                                            'Tahoma, Geneva, sans-serif' => 'Tahoma',
-                                                            'Trebuchet MS, Helvetica, sans-serif' => 'Trebuchet MS',
-                                                            'Courier New, Courier, monospace' => 'Courier New',
-                                                            'Roboto, sans-serif' => 'Roboto (Google)',
-                                                            'Open Sans, sans-serif' => 'Open Sans (Google)',
-                                                            'Lato, sans-serif' => 'Lato (Google)',
-                                                            'Montserrat, sans-serif' => 'Montserrat (Google)'
-                                                        ];
+                                                        $fonts = $this->get_popup_font_choices();
                                                         $selected_font = $popup_settings_logged_in['font_family'] ?? 'Arial, Helvetica, sans-serif';
                                                         foreach ($fonts as $value => $label) {
                                                             echo '<option value="' . esc_attr($value) . '"' . selected($selected_font, $value, false) . '>' . esc_html($label) . '</option>';
@@ -352,7 +444,7 @@ class HTP_Admin {
                                             </tr>
                                             <tr>
 												<th scope="row"><?php esc_html_e( 'Font Size (px)', 'hold-this-product' ); ?></th>
-                                                <td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][font_size]" value="<?php echo esc_attr($popup_settings_logged_in['font_size'] ?? '16'); ?>" min="10" max="40" class="htp-input-right-align"></td>
+                                                <td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][font_size]" value="<?php echo esc_attr($popup_settings_logged_in['font_size'] ?? '16'); ?>" class="htp-input-right-align"></td>
                                             </tr>
                                             <tr>
 												<th scope="row"><?php esc_html_e( 'Text Color', 'hold-this-product' ); ?></th>

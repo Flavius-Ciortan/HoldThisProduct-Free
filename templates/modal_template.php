@@ -68,6 +68,8 @@ if ( $enable_popup_customization ) {
             <input type="hidden" name="security" value="<?php echo esc_attr( wp_create_nonce( 'holdthisproduct_nonce' ) ); ?>">
             <input type="hidden" name="product_id" value="<?php echo esc_attr( $pid ); ?>">
 
+            <div class="htp-reservation-notice" aria-live="polite" style="display: none;"></div>
+
 			<p><strong><?php esc_html_e( 'Reserve this product', 'hold-this-product' ); ?></strong></p>
             <p>
 				<?php

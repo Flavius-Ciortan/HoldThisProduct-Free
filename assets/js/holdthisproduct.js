@@ -21,16 +21,35 @@ jQuery(document).ready(function($) {
 			.trigger('submit');
 	});
 
+    function renderNotice(message, type) {
+        var $notice = $('#reservation-form').find('.htp-reservation-notice');
+
+        if (!$notice.length) {
+            return;
+        }
+
+        $notice
+            .removeClass('htp-reservation-notice--success htp-reservation-notice--error')
+            .addClass('htp-reservation-notice--' + type)
+            .text(message)
+            .show();
+    }
+
+    function clearNotice() {
+        $('#reservation-form').find('.htp-reservation-notice').hide().text('').removeClass('htp-reservation-notice--success htp-reservation-notice--error');
+    }
+
     $('#htp_reserve_product').on('click', function(e) {
         e.preventDefault();
         var productId = $(this).data('productid');
-		modalOpener = this;
+        modalOpener = this;
 
         if (holdthisproduct_ajax.is_logged_in == 0) {
 			alert(holdthisproduct_ajax.i18n.loginRequired);
             return;
         }
 
+        clearNotice();
         $('#reservation-form').find('input[name="product_id"]').val(productId);
         
 		$modal.show().attr('aria-hidden', 'false');
@@ -67,6 +86,7 @@ jQuery(document).ready(function($) {
 
         var $form = $(this);
         var formData = new FormData(this);
+        clearNotice();
         
         var ajaxData = {
             action: 'holdthisproduct_reserve',
@@ -81,15 +101,18 @@ jQuery(document).ready(function($) {
         $.post(holdthisproduct_ajax.ajax_url, ajaxData)
         .done(function(response) {
             if (response.success) {
-				alert(holdthisproduct_ajax.i18n.success);
-				closeReservationModal();
-                location.reload();
+                var successMessage = response.data || 'Reservation successful!';
+                renderNotice(successMessage, 'success');
+                window.setTimeout(function() {
+                    closeReservationModal();
+                    location.reload();
+                }, 2200);
             } else {
-				alert(holdthisproduct_ajax.i18n.error + ' ' + response.data);
+                renderNotice(response.data || 'Reservation could not be completed.', 'error');
             }
         })
         .fail(function() {
-			alert(holdthisproduct_ajax.i18n.failed);
+            renderNotice('Request failed. Please try again.', 'error');
         })
         .always(function() {
             $submitBtn.prop('disabled', false).text(originalText);

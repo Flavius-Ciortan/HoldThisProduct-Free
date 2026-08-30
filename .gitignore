@@ -27,3 +27,5 @@ Thumbs.db
 *.tmp
 *.swp
 
+# Local implementation tracker
+LOCAL_IMPLEMENTATION_CHECKLIST.md

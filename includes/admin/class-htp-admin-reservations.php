@@ -73,7 +73,7 @@ class HTP_Admin_Reservations {
                         <option value="email" <?php selected( $search_type, 'email' ); ?>><?php esc_html_e( 'Email', 'hold-this-product' ); ?></option>
                         <option value="product" <?php selected( $search_type, 'product' ); ?>><?php esc_html_e( 'Product Name', 'hold-this-product' ); ?></option>
                         <option value="product_id" <?php selected( $search_type, 'product_id' ); ?>><?php esc_html_e( 'Product ID', 'hold-this-product' ); ?></option>
-                        <option value="customer_name" <?php selected( $search_type, 'customer_name' ); ?>><?php esc_html_e( 'Customer Name', 'hold-this-product' ); ?></option>
+                        <option value="customer_name" <?php selected( $search_type, 'customer_name' ); ?>><?php esc_html_e( 'Customer', 'hold-this-product' ); ?></option>
                     </select>
 
                     <input type="search" id="reservation-search" placeholder="<?php esc_attr_e( 'Search reservations...', 'hold-this-product' ); ?>" value="<?php echo esc_attr( $search_query ); ?>" style="width: 200px;">
@@ -116,6 +116,25 @@ class HTP_Admin_Reservations {
 
         <script>
         jQuery(document).ready(function($) {
+            function showAdminNotice(type, message) {
+                $('.htp-inline-notice').remove();
+                var $notice = $('<div class="notice htp-inline-notice is-dismissible"></div>').addClass('notice-' + type);
+                $('<p></p>').text(message).appendTo($notice);
+                $notice.insertAfter('.wrap h1');
+            }
+
+            function createActionButton(actionClass, label, reservationId, customer, product) {
+                return $('<button></button>', {
+                    type: 'button',
+                    class: 'button button-small ' + actionClass,
+                    text: label
+                }).attr({
+                    'data-reservation-id': reservationId,
+                    'data-customer': customer,
+                    'data-product': product
+                });
+            }
+
             $('#filter-reservations').on('click', function() {
                 var status = $('#status-filter').val();
                 var searchType = $('#search-type').val();
@@ -174,17 +193,14 @@ class HTP_Admin_Reservations {
                                 }
                             });
 
-                            if ($('.notice.notice-success').length === 0) {
-                                $('<div class="notice notice-success is-dismissible"><p>Reservation deleted successfully.</p></div>')
-                                    .insertAfter('.wrap h1');
-                            }
+                            showAdminNotice('success', 'Reservation deleted successfully.');
                         } else {
-                            alert('Error: ' + response.data);
+                            showAdminNotice('error', response.data || 'Reservation could not be deleted.');
                             $btn.prop('disabled', false).text('Delete');
                         }
                     })
                     .fail(function() {
-                        alert('Request failed. Please try again.');
+                        showAdminNotice('error', 'Request failed. Please try again.');
                         $btn.prop('disabled', false).text('Delete');
                     });
                 }
@@ -208,25 +224,21 @@ class HTP_Admin_Reservations {
                         if (response.success) {
                             var $row = $btn.closest('tr');
                             var $actionsCell = $row.find('td:last-child');
-                            $actionsCell.html('<button type="button" class="button button-small htp-cancel-reservation" ' +
-                                'data-reservation-id="' + reservationId + '" ' +
-                                'data-customer="' + customer + '" ' +
-                                'data-product="' + product + '">Cancel</button>');
+                            $actionsCell.empty().append(
+                                createActionButton('htp-cancel-reservation', 'Cancel', reservationId, customer, product)
+                            );
 
                             var $statusCell = $row.find('td:nth-child(3) span');
                             $statusCell.removeClass('status-pending-approval').addClass('status-active').text('Active');
 
-                            if ($('.notice.notice-success').length === 0) {
-                                $('<div class="notice notice-success is-dismissible"><p>Reservation approved successfully.</p></div>')
-                                    .insertAfter('.wrap h1');
-                            }
+                            showAdminNotice('success', 'Reservation approved successfully.');
                         } else {
-                            alert('Error: ' + response.data);
+                            showAdminNotice('error', response.data || 'Reservation could not be approved.');
                             $btn.prop('disabled', false).text('Approve');
                         }
                     })
                     .fail(function() {
-                        alert('Request failed. Please try again.');
+                        showAdminNotice('error', 'Request failed. Please try again.');
                         $btn.prop('disabled', false).text('Approve');
                     });
                 }
@@ -252,27 +264,23 @@ class HTP_Admin_Reservations {
                         if (response.success) {
                             var $row = $btn.closest('tr');
                             var $actionsCell = $row.find('td:last-child');
-                            $actionsCell.html('<button type="button" class="button button-small button-link-delete htp-delete-reservation" ' +
-                                'data-reservation-id="' + reservationId + '" ' +
-                                'data-customer="' + customer + '" ' +
-                                'data-product="' + product + '">Delete</button>');
+                            $actionsCell.empty().append(
+                                createActionButton('button-link-delete htp-delete-reservation', 'Delete', reservationId, customer, product)
+                            );
 
                             var $statusCell = $row.find('td:nth-child(3) span');
                             $statusCell.removeClass('status-pending-approval').addClass('status-denied').text('Denied');
 
                             $row.find('td:nth-child(6)').text('—').removeClass('time-left-critical time-left-warning');
 
-                            if ($('.notice.notice-success').length === 0) {
-                                $('<div class="notice notice-success is-dismissible"><p>Reservation denied successfully.</p></div>')
-                                    .insertAfter('.wrap h1');
-                            }
+                            showAdminNotice('success', 'Reservation denied successfully.');
                         } else {
-                            alert('Error: ' + response.data);
+                            showAdminNotice('error', response.data || 'Reservation could not be denied.');
                             $btn.prop('disabled', false).text('Deny');
                         }
                     })
                     .fail(function() {
-                        alert('Request failed. Please try again.');
+                        showAdminNotice('error', 'Request failed. Please try again.');
                         $btn.prop('disabled', false).text('Deny');
                     });
                 }
@@ -285,7 +293,7 @@ class HTP_Admin_Reservations {
                 var product = $btn.data('product') || 'this product';
 
                 if (!reservationId) {
-                    alert('Missing reservation ID.');
+                    showAdminNotice('error', 'Missing reservation ID.');
                     return;
                 }
 
@@ -299,14 +307,20 @@ class HTP_Admin_Reservations {
                     })
                     .done(function(response) {
                         if (response.success) {
-                            window.location.reload();
+                            var $row = $btn.closest('tr');
+                            $row.find('td:nth-child(3) span').removeClass().addClass('status-cancelled').text('Cancelled');
+                            $row.find('td:nth-child(6)').text('—').removeClass('time-left-critical time-left-warning');
+                            $row.find('td:last-child').empty().append(
+                                createActionButton('button-link-delete htp-delete-reservation', 'Delete', reservationId, customer, product)
+                            );
+                            showAdminNotice('success', 'Reservation cancelled successfully.');
                         } else {
-                            alert('Error: ' + response.data);
+                            showAdminNotice('error', response.data || 'Reservation could not be cancelled.');
                             $btn.prop('disabled', false).text('Cancel');
                         }
                     })
                     .fail(function() {
-                        alert('Request failed. Please try again.');
+                        showAdminNotice('error', 'Request failed. Please try again.');
                         $btn.prop('disabled', false).text('Cancel');
                     });
                 }
@@ -426,7 +440,7 @@ class HTP_Admin_Reservations {
         global $wpdb;
 
         $meta_query = array();
-		$author_ids = null;
+		$customer_reservation_ids = null;
 
         if ( $status_filter !== 'all' ) {
             $meta_query[] = array(
@@ -475,7 +489,7 @@ class HTP_Admin_Reservations {
                     break;
 
                 case 'customer_name':
-					$author_ids = get_users( array( 'search' => '*' . $search_query . '*', 'search_columns' => array( 'display_name', 'user_login', 'user_email' ), 'fields' => 'ids', 'number' => 100 ) );
+					$customer_reservation_ids = $this->get_customer_match_ids( $search_query );
                     break;
             }
         }
@@ -492,11 +506,69 @@ class HTP_Admin_Reservations {
         if ( ! empty( $meta_query ) ) {
             $args['meta_query'] = $meta_query;
         }
-		if ( null !== $author_ids ) {
-			$args['author__in'] = $author_ids ? array_map( 'absint', $author_ids ) : array( 0 );
+		if ( null !== $customer_reservation_ids ) {
+			$args['post__in'] = $customer_reservation_ids ? $customer_reservation_ids : array( 0 );
 		}
 
 		return new WP_Query( $args );
+    }
+
+    /**
+     * Get reservation IDs matching logged-in or guest customer data.
+     *
+     * @param string $search_query Search query.
+     * @return int[]
+     */
+    private function get_customer_match_ids( $search_query ) {
+        $search_query = trim( $search_query );
+        if ( '' === $search_query ) {
+            return array();
+        }
+
+        $user_query = new WP_User_Query( array(
+            'search'         => '*' . $search_query . '*',
+            'search_columns' => array( 'display_name', 'user_email', 'user_login' ),
+            'fields'         => 'ID',
+            'number'         => 100,
+        ) );
+
+        $author_ids = array_map( 'absint', $user_query->get_results() );
+        $matches    = array();
+
+        if ( $author_ids ) {
+            $matches = get_posts( array(
+                'post_type'      => 'htp_reservation',
+                'post_status'    => 'publish',
+                'fields'         => 'ids',
+                'posts_per_page' => -1,
+                'no_found_rows'  => true,
+                'author__in'     => $author_ids,
+            ) );
+        }
+
+        $guest_matches = get_posts( array(
+            'post_type'      => 'htp_reservation',
+            'post_status'    => 'publish',
+            'fields'         => 'ids',
+            'posts_per_page' => -1,
+            'no_found_rows'  => true,
+            'author__in'      => array( 0 ),
+            'meta_query'     => array(
+                'relation' => 'OR',
+                array(
+                    'key'     => '_htp_name',
+                    'value'   => $search_query,
+                    'compare' => 'LIKE',
+                ),
+                array(
+                    'key'     => '_htp_surname',
+                    'value'   => $search_query,
+                    'compare' => 'LIKE',
+                ),
+            ),
+        ) );
+
+        return array_values( array_unique( array_map( 'absint', array_merge( $matches, $guest_matches ) ) ) );
     }
 
     private function get_reservations_summary() {

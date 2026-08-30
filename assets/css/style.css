@@ -49,6 +49,27 @@ label[for="rez_check"] {
     color: #333;
 }
 
+.htp-reservation-notice {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.htp-reservation-notice--success {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #0f5132;
+}
+
+.htp-reservation-notice--error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #7f1d1d;
+}
+
 /* My Account Reservations */
 .htp-reservations-container {
     --htp-primary: #2F89F9;
