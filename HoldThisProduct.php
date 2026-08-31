@@ -8,6 +8,8 @@
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
+ * WC requires at least: 8.0
+ * WC tested up to:   11.0
  * Author:            Flavius Ciortan, Anghel Emanuel.
  * Author URI:        https://github.com/Flavius-Ciortan
  * Text Domain:       hold-this-product
