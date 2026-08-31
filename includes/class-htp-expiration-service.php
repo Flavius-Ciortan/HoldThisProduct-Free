@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Schedules, processes, and reports reservation expiration health. */
 final class HTP_Expiration_Service {
@@ -40,17 +42,28 @@ final class HTP_Expiration_Service {
 	}
 
 	public function expire_old_reservations() {
-		$ids = get_posts( array(
-			'post_type'      => 'htp_reservation',
-			'post_status'    => 'publish',
-			'fields'         => 'ids',
-			'posts_per_page' => 500,
-			'no_found_rows'  => true,
-			'meta_query' => array(
-				array( 'key' => HTP_Reservation_Meta::STATUS, 'value' => HTP_Reservation_Status::open(), 'compare' => 'IN' ),
-				array( 'key' => HTP_Reservation_Meta::EXPIRES_AT, 'value' => time(), 'type' => 'NUMERIC', 'compare' => '<=' ),
-			),
-		) );
+		$ids = get_posts(
+			array(
+				'post_type'      => 'htp_reservation',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+				'posts_per_page' => 500,
+				'no_found_rows'  => true,
+				'meta_query'     => array(
+					array(
+						'key'     => HTP_Reservation_Meta::STATUS,
+						'value'   => HTP_Reservation_Status::open(),
+						'compare' => 'IN',
+					),
+					array(
+						'key'     => HTP_Reservation_Meta::EXPIRES_AT,
+						'value'   => time(),
+						'type'    => 'NUMERIC',
+						'compare' => '<=',
+					),
+				),
+			)
+		);
 		foreach ( $ids as $reservation_id ) {
 			$this->expire_reservation( $reservation_id );
 		}
@@ -62,7 +75,7 @@ final class HTP_Expiration_Service {
 			return false;
 		}
 		$product = HTP_Reservation_Status::ACTIVE === $previous_status ? wc_get_product( (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ) ) : null;
-		$result = $this->inventory->release( $reservation_id, $previous_status, HTP_Reservation_Status::EXPIRED, $product, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::QUANTITY ), 'expire' );
+		$result  = $this->inventory->release( $reservation_id, $previous_status, HTP_Reservation_Status::EXPIRED, $product, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::QUANTITY ), 'expire' );
 		if ( is_wp_error( $result ) ) {
 			return false;
 		}
@@ -86,18 +99,21 @@ final class HTP_Expiration_Service {
 	public function get_site_health_result() {
 		$cron_missing = ! wp_next_scheduled( self::CRON_HOOK );
 		$inconsistent = $this->inventory->find_inconsistent_states( 100 );
-		$result = array(
+		$result       = array(
 			'label'       => __( 'Reservation expiration and inventory ownership are healthy', 'hold-this-product' ),
 			'status'      => 'good',
-			'badge'       => array( 'label' => __( 'Hold This Product', 'hold-this-product' ), 'color' => 'blue' ),
+			'badge'       => array(
+				'label' => __( 'Hold This Product', 'hold-this-product' ),
+				'color' => 'blue',
+			),
 			'description' => '<p>' . esc_html__( 'The expiration schedule is active and sampled reservation inventory states are consistent.', 'hold-this-product' ) . '</p>',
 			'actions'     => '',
 			'test'        => 'hold_this_product_operations',
 		);
 		if ( $cron_missing || $inconsistent ) {
-			$result['label'] = __( 'Reservation operations need attention', 'hold-this-product' );
+			$result['label']  = __( 'Reservation operations need attention', 'hold-this-product' );
 			$result['status'] = 'critical';
-			$messages = array();
+			$messages         = array();
 			if ( $cron_missing ) {
 				$messages[] = __( 'The reservation expiration schedule is missing.', 'hold-this-product' );
 			}

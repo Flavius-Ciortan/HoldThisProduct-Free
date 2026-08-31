@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Atomically coordinates reservation status and WooCommerce stock ownership.
@@ -109,7 +111,7 @@ final class HTP_Inventory_Manager {
 			return $state;
 		}
 
-		$status = $status ?: (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
+		$status = $status ? $status : (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 		if ( HTP_Reservation_Status::ACTIVE === $status ) {
 			return self::STATE_HELD;
 		}
@@ -124,16 +126,21 @@ final class HTP_Inventory_Manager {
 
 	/** Backfill explicit ownership for legacy records without changing stock. */
 	public function backfill_missing_states( $limit = 500 ) {
-		$ids = get_posts( array(
-			'post_type'      => 'htp_reservation',
-			'post_status'    => 'publish',
-			'fields'         => 'ids',
-			'posts_per_page' => max( 1, absint( $limit ) ),
-			'no_found_rows'  => true,
-			'meta_query'     => array(
-				array( 'key' => self::META_STATE, 'compare' => 'NOT EXISTS' ),
-			),
-		) );
+		$ids = get_posts(
+			array(
+				'post_type'      => 'htp_reservation',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+				'posts_per_page' => max( 1, absint( $limit ) ),
+				'no_found_rows'  => true,
+				'meta_query'     => array(
+					array(
+						'key'     => self::META_STATE,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
 		foreach ( $ids as $reservation_id ) {
 			$status = (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 			add_post_meta( $reservation_id, self::META_STATE, $this->get_state( $reservation_id, $status ), true );
@@ -143,17 +150,25 @@ final class HTP_Inventory_Manager {
 
 	/** Return records whose lifecycle status disagrees with inventory ownership. */
 	public function find_inconsistent_states( $limit = 100 ) {
-		$ids = get_posts( array(
-			'post_type'      => 'htp_reservation',
-			'post_status'    => 'publish',
-			'fields'         => 'ids',
-			'posts_per_page' => max( 1, absint( $limit ) ),
-			'no_found_rows'  => true,
-			'meta_query'     => array(
-				array( 'key' => HTP_Reservation_Meta::STATUS, 'compare' => 'EXISTS' ),
-				array( 'key' => self::META_STATE, 'compare' => 'EXISTS' ),
-			),
-		) );
+		$ids     = get_posts(
+			array(
+				'post_type'      => 'htp_reservation',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+				'posts_per_page' => max( 1, absint( $limit ) ),
+				'no_found_rows'  => true,
+				'meta_query'     => array(
+					array(
+						'key'     => HTP_Reservation_Meta::STATUS,
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => self::META_STATE,
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
 		$invalid = array();
 		foreach ( $ids as $reservation_id ) {
 			$status = (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );

@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Resolves Free defaults through stable filters that paid modules can extend. */
 final class HTP_Reservation_Rules {
@@ -9,7 +11,7 @@ final class HTP_Reservation_Rules {
 			return false;
 		}
 
-		$user_id = absint( $user_id ?: get_current_user_id() );
+		$user_id = absint( $user_id ? $user_id : get_current_user_id() );
 		if ( ! $user_id ) {
 			return false;
 		}
@@ -33,7 +35,7 @@ final class HTP_Reservation_Rules {
 	public function get_max_reservations_per_user( $user_id = 0 ) {
 		$options = $this->get_options();
 		$limit   = max( 1, min( 100, absint( $options['max_reservations'] ) ) );
-		return max( 1, absint( apply_filters( 'htp_customer_reservation_limit', $limit, absint( $user_id ?: get_current_user_id() ) ) ) );
+		return max( 1, absint( apply_filters( 'htp_customer_reservation_limit', $limit, absint( $user_id ? $user_id : get_current_user_id() ) ) ) );
 	}
 
 	public function requires_approval( $product_id, $user_id ) {

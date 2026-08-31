@@ -10,10 +10,15 @@ require_once __DIR__ . '/includes/class-htp-reservation-meta.php';
 
 function hold_this_product_uninstall_site_data() {
 	do {
-		$ids = get_posts( array(
-			'post_type' => 'htp_reservation', 'post_status' => 'any', 'fields' => 'ids',
-			'posts_per_page' => 200, 'no_found_rows' => true,
-		) );
+		$ids = get_posts(
+			array(
+				'post_type'      => 'htp_reservation',
+				'post_status'    => 'any',
+				'fields'         => 'ids',
+				'posts_per_page' => 200,
+				'no_found_rows'  => true,
+			)
+		);
 		foreach ( $ids as $reservation_id ) {
 			if ( HTP_Reservation_Status::ACTIVE === HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS ) && function_exists( 'wc_update_product_stock' ) ) {
 				$product = wc_get_product( (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ) );
@@ -29,7 +34,12 @@ function hold_this_product_uninstall_site_data() {
 }
 
 if ( is_multisite() ) {
-	$hold_this_product_site_ids = get_sites( array( 'fields' => 'ids', 'number' => 0 ) );
+	$hold_this_product_site_ids = get_sites(
+		array(
+			'fields' => 'ids',
+			'number' => 0,
+		)
+	);
 	foreach ( $hold_this_product_site_ids as $hold_this_product_site_id ) {
 		switch_to_blog( $hold_this_product_site_id );
 		hold_this_product_uninstall_site_data();

@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Stable persistence query contract for reservation extensions. */
 interface HTP_Reservation_Repository_Interface {

@@ -88,7 +88,7 @@ jobs:
           unzip -Z1 dist/*.zip > /tmp/package-files.txt
           grep -q '^hold-this-product/HoldThisProduct.php$' /tmp/package-files.txt
           ! grep -Eq '(^|/)(tests|IMPLEMENTATION|vendor|\.git|\.github|\.vscode)(/|$)' /tmp/package-files.txt
-          sha256sum --check dist/*.sha256
+          (cd dist && sha256sum --check *.sha256)
       - uses: actions/upload-artifact@v4
         with:
           name: hold-this-product-release

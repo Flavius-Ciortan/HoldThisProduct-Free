@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Owns reservation creation and all customer/admin lifecycle transitions. */
 final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Interface {
@@ -60,7 +62,7 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 				return new WP_Error( 'htp_create_failed', __( 'Could not create reservation.', 'hold-this-product' ) );
 			}
 			return array(
-				'reservation_id'   => $reservation_id,
+				'reservation_id'    => $reservation_id,
 				'requires_approval' => $requires_approval,
 			);
 		} finally {
@@ -70,8 +72,8 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 
 	public function create( $product_id, $user_id = 0, $guest_email = '' ) {
 		unset( $guest_email );
-		$product_id       = absint( $product_id );
-		$user_id          = absint( $user_id );
+		$product_id        = absint( $product_id );
+		$user_id           = absint( $user_id );
 		$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
 		$duration_hours    = $this->rules->get_duration_hours( $requires_approval ? 'pending' : 'active', $product_id, $user_id );
 		$expires_at        = time() + ( $duration_hours * HOUR_IN_SECONDS );
@@ -89,8 +91,8 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 			return false;
 		}
 
-		$initial_status = $requires_approval ? HTP_Reservation_Status::PENDING : HTP_Reservation_Status::INITIALIZING;
-		$meta_data      = array(
+		$initial_status     = $requires_approval ? HTP_Reservation_Status::PENDING : HTP_Reservation_Status::INITIALIZING;
+		$meta_data          = array(
 			HTP_Reservation_Meta::PRODUCT_ID      => $product_id,
 			HTP_Reservation_Meta::STATUS          => $initial_status,
 			HTP_Reservation_Meta::EXPIRES_AT      => $expires_at,
@@ -102,7 +104,7 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 		if ( $user_id ) {
 			$user = get_userdata( $user_id );
 			if ( $user ) {
-				$notification_email                        = $user->user_email;
+				$notification_email                       = $user->user_email;
 				$meta_data[ HTP_Reservation_Meta::EMAIL ] = $notification_email;
 			}
 		}

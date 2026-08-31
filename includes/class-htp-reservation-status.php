@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Canonical reservation statuses and allowed lifecycle transitions. */
 final class HTP_Reservation_Status {

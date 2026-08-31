@@ -15,7 +15,9 @@
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // Define plugin constants
 define( 'HTP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -31,209 +33,209 @@ function htp_get_manage_capability() {
  * Main plugin class
  */
 class HoldThisProduct {
-    
-    /**
-     * Single instance of the plugin
-     */
-    private static $instance = null;
-    
-    /**
-     * Plugin components
-     */
-    public $admin;
-    public $frontend;
-    public $reservations;
-	private $services;
-    
-    /**
-     * Get single instance
-     */
-    public static function get_instance() {
-        if ( null === self::$instance ) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
 
-    /**
-     * Constructor
-     */
-    private function __construct() {
-        $this->init();
-    }
-    
-    /**
-     * Initialize the plugin
-     */
-    private function init() {
-        add_action( 'before_woocommerce_init', array( $this, 'declare_woocommerce_compatibility' ) );
+	/**
+	 * Single instance of the plugin
+	 */
+	private static $instance = null;
+
+	/**
+	 * Plugin components
+	 */
+	public $admin;
+	public $frontend;
+	public $reservations;
+	private $services;
+
+	/**
+	 * Get single instance
+	 */
+	public static function get_instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * Constructor
+	 */
+	private function __construct() {
+		$this->init();
+	}
+
+	/**
+	 * Initialize the plugin
+	 */
+	private function init() {
+		add_action( 'before_woocommerce_init', array( $this, 'declare_woocommerce_compatibility' ) );
 		add_action( 'admin_init', array( $this, 'maybe_upgrade' ) );
 		add_action( 'admin_init', array( $this, 'maybe_migrate_inventory_states' ) );
 		add_action( 'admin_init', array( $this, 'add_privacy_policy_content' ) );
-        // WooCommerce has loaded by this point, while WordPress init has not yet run.
-        add_action( 'plugins_loaded', array( $this, 'bootstrap_plugin' ), 20 );
-        
-        // Activation and deactivation hooks
-        register_activation_hook( __FILE__, array( $this, 'activate_plugin' ) );
-        register_deactivation_hook( __FILE__, array( $this, 'deactivate_plugin' ) );
-    }
-    
-    /**
-     * Check plugin dependencies
-     */
-    public function check_dependencies() {
-        if ( ! class_exists( 'WooCommerce' ) ) {
-            add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
-            return false;
-        }
-        return true;
-    }
-    
-    /**
-     * Show notice if WooCommerce is missing
-     */
-    public function woocommerce_missing_notice() {
-        ?>
-        <div class="notice notice-error">
-            <p><?php esc_html_e( 'Hold This Product requires WooCommerce to be installed and active.', 'hold-this-product' ); ?></p>
-        </div>
-        <?php
-    }
+		// WooCommerce has loaded by this point, while WordPress init has not yet run.
+		add_action( 'plugins_loaded', array( $this, 'bootstrap_plugin' ), 20 );
 
-    /**
-     * Load and initialize services before WordPress fires init.
-     *
-     * Core services register post types and rewrite endpoints on init, so creating
-     * them from an init callback would register those callbacks one request late.
-     */
-    public function bootstrap_plugin() {
-        if ( ! $this->check_dependencies() ) {
-            return;
-        }
+		// Activation and deactivation hooks
+		register_activation_hook( __FILE__, array( $this, 'activate_plugin' ) );
+		register_deactivation_hook( __FILE__, array( $this, 'deactivate_plugin' ) );
+	}
 
-        $this->load_classes();
+	/**
+	 * Check plugin dependencies
+	 */
+	public function check_dependencies() {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Show notice if WooCommerce is missing
+	 */
+	public function woocommerce_missing_notice() {
+		?>
+		<div class="notice notice-error">
+			<p><?php esc_html_e( 'Hold This Product requires WooCommerce to be installed and active.', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Load and initialize services before WordPress fires init.
+	 *
+	 * Core services register post types and rewrite endpoints on init, so creating
+	 * them from an init callback would register those callbacks one request late.
+	 */
+	public function bootstrap_plugin() {
+		if ( ! $this->check_dependencies() ) {
+			return;
+		}
+
+		$this->load_classes();
 		$this->services = new HTP_Service_Container();
-        $this->init_plugin();
-    }
+		$this->init_plugin();
+	}
 
-    /**
-     * Load required classes
-     */
-    public function load_classes() {
-        // Core classes
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-service-container.php';
+	/**
+	 * Load required classes
+	 */
+	public function load_classes() {
+		// Core classes
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-service-container.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-dependency-notices.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-meta.php';
 		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-repository.php';
 		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-lifecycle.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-rules.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-lock-manager.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-expiration-service.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-expiration-service.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-lifecycle.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-email-manager.php';
-        
-        // Admin classes
-        if ( is_admin() ) {
-            require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin.php';
-            require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin-reservations.php';
-            require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin-analytics.php';
-        }
-        
-        // Frontend classes
-        if ( ! is_admin() ) {
-            require_once HTP_PLUGIN_PATH . 'includes/frontend/class-htp-frontend.php';
-        }
-    }
-    
-    /**
-     * Initialize plugin components
-     */
-    public function init_plugin() {
-        if ( $this->reservations instanceof HTP_Reservations ) {
-            return;
-        }
-        
-        // Initialize core
-		$inventory     = $this->services->set( 'inventory', new HTP_Inventory_Manager() );
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-email-manager.php';
+
+		// Admin classes
+		if ( is_admin() ) {
+			require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin.php';
+			require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin-reservations.php';
+			require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-analytics.php';
+		}
+
+		// Frontend classes
+		if ( ! is_admin() ) {
+			require_once HTP_PLUGIN_PATH . 'includes/frontend/class-htp-frontend.php';
+		}
+	}
+
+	/**
+	 * Initialize plugin components
+	 */
+	public function init_plugin() {
+		if ( $this->reservations instanceof HTP_Reservations ) {
+			return;
+		}
+
+		// Initialize core
+		$inventory = $this->services->set( 'inventory', new HTP_Inventory_Manager() );
 		$this->services->set( 'dependency_notices', new HTP_Dependency_Notices() );
-		$repository    = $this->services->set( 'repository', new HTP_Reservation_Repository() );
-		$notifications = $this->services->set( 'notifications', new HTP_Notification_Dispatcher() );
-		$privacy       = $this->services->set( 'privacy', new HTP_Privacy_Service() );
-		$rules         = $this->services->set( 'rules', new HTP_Reservation_Rules() );
-		$locks         = $this->services->set( 'locks', new HTP_Lock_Manager() );
-		$cart_order    = $this->services->set( 'cart_order', new HTP_Cart_Order_Service( $inventory, $repository ) );
-		$expiration    = $this->services->set( 'expiration', new HTP_Expiration_Service( $inventory, $notifications, $cart_order ) );
-		$lifecycle     = $this->services->set( 'lifecycle', new HTP_Reservation_Lifecycle( $inventory, $notifications, $repository, $cart_order, $rules, $locks ) );
-        $this->reservations = $this->services->set( 'reservations', new HTP_Reservations( $inventory, $notifications, $privacy, $repository, $cart_order, $expiration, $rules, $lifecycle ) );
-        $this->services->set( 'email_manager', new HTP_Email_Manager() );
-        
-        // Initialize admin
-        if ( is_admin() ) {
-            $this->admin = new HTP_Admin( $this->reservations );
-            new HTP_Analytics( $this->reservations );
-        }
-        
-        // Initialize frontend
-        if ( ! is_admin() ) {
-            $this->frontend = new HTP_Frontend( $this->reservations );
-        }
+		$repository         = $this->services->set( 'repository', new HTP_Reservation_Repository() );
+		$notifications      = $this->services->set( 'notifications', new HTP_Notification_Dispatcher() );
+		$privacy            = $this->services->set( 'privacy', new HTP_Privacy_Service() );
+		$rules              = $this->services->set( 'rules', new HTP_Reservation_Rules() );
+		$locks              = $this->services->set( 'locks', new HTP_Lock_Manager() );
+		$cart_order         = $this->services->set( 'cart_order', new HTP_Cart_Order_Service( $inventory, $repository ) );
+		$expiration         = $this->services->set( 'expiration', new HTP_Expiration_Service( $inventory, $notifications, $cart_order ) );
+		$lifecycle          = $this->services->set( 'lifecycle', new HTP_Reservation_Lifecycle( $inventory, $notifications, $repository, $cart_order, $rules, $locks ) );
+		$this->reservations = $this->services->set( 'reservations', new HTP_Reservations( $inventory, $notifications, $privacy, $repository, $cart_order, $expiration, $rules, $lifecycle ) );
+		$this->services->set( 'email_manager', new HTP_Email_Manager() );
+
+		// Initialize admin
+		if ( is_admin() ) {
+			$this->admin = new HTP_Admin( $this->reservations );
+			new HTP_Analytics( $this->reservations );
+		}
+
+		// Initialize frontend
+		if ( ! is_admin() ) {
+			$this->frontend = new HTP_Frontend( $this->reservations );
+		}
 
 		do_action( 'htp_plugin_loaded', $this, $this->services );
-    }
+	}
 
 	/** Retrieve a documented core service for compatible add-ons. */
 	public function get_service( $id ) {
 		return $this->services instanceof HTP_Service_Container ? $this->services->get( $id ) : null;
 	}
-    
-    /**
-     * Plugin activation
-     */
-    public function activate_plugin() {
-        if ( ! $this->check_dependencies() ) {
-            return;
-        }
-        
-        // Load reservations class to register endpoints
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-service-container.php';
+
+	/**
+	 * Plugin activation
+	 */
+	public function activate_plugin() {
+		if ( ! $this->check_dependencies() ) {
+			return;
+		}
+
+		// Load reservations class to register endpoints
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-service-container.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-dependency-notices.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-meta.php';
 		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-repository.php';
 		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-lifecycle.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-rules.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-lock-manager.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-expiration-service.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-expiration-service.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
 		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-lifecycle.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
-        require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
-        $reservations = new HTP_Reservations();
-        
-        // Flush rewrite rules to register the new endpoint
-        $reservations->flush_rewrite_rules();
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
+		$reservations = new HTP_Reservations();
+
+		// Flush rewrite rules to register the new endpoint
+		$reservations->flush_rewrite_rules();
 		$reservations->schedule_expiration();
 		update_option( 'htp_version', HTP_VERSION, false );
-    }
-    
-    /**
-     * Plugin deactivation
-     */
-    public function deactivate_plugin() {
+	}
+
+	/**
+	 * Plugin deactivation
+	 */
+	public function deactivate_plugin() {
 		wp_clear_scheduled_hook( 'htp_expire_reservations' );
-        // Flush rewrite rules on deactivation to clean up
-        flush_rewrite_rules();
-    }
+		// Flush rewrite rules on deactivation to clean up
+		flush_rewrite_rules();
+	}
 
 	/**
 	 * Declare tested WooCommerce feature compatibility.
@@ -250,15 +252,26 @@ class HoldThisProduct {
 		if ( version_compare( (string) get_option( 'htp_version', '0' ), HTP_VERSION, '>=' ) || ! $this->reservations instanceof HTP_Reservations ) {
 			return;
 		}
-		$ids = get_posts( array(
-			'post_type' => 'htp_reservation', 'post_status' => 'publish', 'fields' => 'ids',
-			'posts_per_page' => 500, 'no_found_rows' => true,
-			'meta_query' => array(
-				array( 'key' => HTP_Reservation_Meta::EXPIRES_AT, 'compare' => 'EXISTS' ),
-				array( 'key' => HTP_Reservation_Meta::TIMESTAMP_MODEL, 'compare' => 'NOT EXISTS' ),
-			),
-		) );
-		$offset = current_time( 'timestamp' ) - time();
+		$ids    = get_posts(
+			array(
+				'post_type'      => 'htp_reservation',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+				'posts_per_page' => 500,
+				'no_found_rows'  => true,
+				'meta_query'     => array(
+					array(
+						'key'     => HTP_Reservation_Meta::EXPIRES_AT,
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => HTP_Reservation_Meta::TIMESTAMP_MODEL,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
+		$offset = current_datetime()->getOffset();
 		foreach ( $ids as $reservation_id ) {
 			$expires = (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT );
 			HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT, max( 0, $expires - $offset ) );

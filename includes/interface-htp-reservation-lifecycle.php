@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Stable reservation transition contract for compatible add-ons. */
 interface HTP_Reservation_Lifecycle_Interface {

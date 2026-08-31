@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Dispatches lifecycle notifications through legacy and generic event contracts. */
 final class HTP_Notification_Dispatcher {

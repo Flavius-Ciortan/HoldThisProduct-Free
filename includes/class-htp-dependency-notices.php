@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Shared admin notice queue for compatible add-on dependency failures. */
 final class HTP_Dependency_Notices {

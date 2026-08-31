@@ -1,6 +1,8 @@
 <?php
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Core reservations functionality
@@ -17,48 +19,48 @@ class HTP_Reservations {
 	private $expiration;
 	private $rules;
 	private $lifecycle;
-    
-    /**
-     * Constructor
-     */
-	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null, $expiration = null, $rules = null, $lifecycle = null ) {
-			$this->inventory = $inventory instanceof HTP_Inventory_Manager ? $inventory : new HTP_Inventory_Manager();
-			$this->notifications = $notifications instanceof HTP_Notification_Dispatcher ? $notifications : new HTP_Notification_Dispatcher();
-			$this->privacy = $privacy instanceof HTP_Privacy_Service ? $privacy : new HTP_Privacy_Service();
-			$this->repository = $repository instanceof HTP_Reservation_Repository ? $repository : new HTP_Reservation_Repository();
-			$this->cart_order = $cart_order instanceof HTP_Cart_Order_Service ? $cart_order : new HTP_Cart_Order_Service( $this->inventory, $this->repository );
-			$this->expiration = $expiration instanceof HTP_Expiration_Service ? $expiration : new HTP_Expiration_Service( $this->inventory, $this->notifications, $this->cart_order );
-			$this->rules = $rules instanceof HTP_Reservation_Rules ? $rules : new HTP_Reservation_Rules();
-			$this->lifecycle = $lifecycle instanceof HTP_Reservation_Lifecycle_Interface ? $lifecycle : new HTP_Reservation_Lifecycle( $this->inventory, $this->notifications, $this->repository, $this->cart_order, $this->rules, new HTP_Lock_Manager() );
-	        $this->init();
-    }
-    
-    /**
-     * Initialize hooks
-     */
-	    private function init() {
-	        add_action( 'init', array( $this, 'register_post_type' ) );
-	        add_action( 'init', array( $this, 'register_endpoints' ) );
-			add_filter( 'cron_schedules', array( $this, 'add_cron_schedule' ) );
-			add_action( self::CRON_HOOK, array( $this, 'expire_old_reservations' ) );
-			add_action( 'init', array( $this, 'schedule_expiration' ), 20 );
-        
-        // WooCommerce account integration
-        add_filter( 'woocommerce_account_menu_items', array( $this, 'add_account_menu_item' ) );
-        add_action( 'woocommerce_account_htp-reservations_endpoint', array( $this, 'reservations_endpoint_content' ) );
-        add_filter( 'woocommerce_get_query_vars', array( $this, 'add_query_vars' ) );
-        add_action( 'template_redirect', array( $this, 'handle_reservation_actions' ) );
-        add_filter( 'woocommerce_endpoint_htp-reservations_title', array( $this, 'reservations_endpoint_title' ) );
-        add_filter( 'woocommerce_page_title', array( $this, 'change_reservations_page_title' ) );
-        
-        // AJAX handlers
-        add_action( 'wp_ajax_holdthisproduct_reserve', array( $this, 'handle_reservation_ajax' ) );
+
+	/**
+	 * Constructor
+	 */
+	public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null, $expiration = null, $rules = null, $lifecycle = null ) {
+		$this->inventory     = $inventory instanceof HTP_Inventory_Manager ? $inventory : new HTP_Inventory_Manager();
+		$this->notifications = $notifications instanceof HTP_Notification_Dispatcher ? $notifications : new HTP_Notification_Dispatcher();
+		$this->privacy       = $privacy instanceof HTP_Privacy_Service ? $privacy : new HTP_Privacy_Service();
+		$this->repository    = $repository instanceof HTP_Reservation_Repository ? $repository : new HTP_Reservation_Repository();
+		$this->cart_order    = $cart_order instanceof HTP_Cart_Order_Service ? $cart_order : new HTP_Cart_Order_Service( $this->inventory, $this->repository );
+		$this->expiration    = $expiration instanceof HTP_Expiration_Service ? $expiration : new HTP_Expiration_Service( $this->inventory, $this->notifications, $this->cart_order );
+		$this->rules         = $rules instanceof HTP_Reservation_Rules ? $rules : new HTP_Reservation_Rules();
+		$this->lifecycle     = $lifecycle instanceof HTP_Reservation_Lifecycle_Interface ? $lifecycle : new HTP_Reservation_Lifecycle( $this->inventory, $this->notifications, $this->repository, $this->cart_order, $this->rules, new HTP_Lock_Manager() );
+		$this->init();
+	}
+
+	/**
+	 * Initialize hooks
+	 */
+	private function init() {
+		add_action( 'init', array( $this, 'register_post_type' ) );
+		add_action( 'init', array( $this, 'register_endpoints' ) );
+		add_filter( 'cron_schedules', array( $this, 'add_cron_schedule' ) );
+		add_action( self::CRON_HOOK, array( $this, 'expire_old_reservations' ) );
+		add_action( 'init', array( $this, 'schedule_expiration' ), 20 );
+
+		// WooCommerce account integration
+		add_filter( 'woocommerce_account_menu_items', array( $this, 'add_account_menu_item' ) );
+		add_action( 'woocommerce_account_htp-reservations_endpoint', array( $this, 'reservations_endpoint_content' ) );
+		add_filter( 'woocommerce_get_query_vars', array( $this, 'add_query_vars' ) );
+		add_action( 'template_redirect', array( $this, 'handle_reservation_actions' ) );
+		add_filter( 'woocommerce_endpoint_htp-reservations_title', array( $this, 'reservations_endpoint_title' ) );
+		add_filter( 'woocommerce_page_title', array( $this, 'change_reservations_page_title' ) );
+
+		// AJAX handlers
+		add_action( 'wp_ajax_holdthisproduct_reserve', array( $this, 'handle_reservation_ajax' ) );
 
 		add_filter( 'woocommerce_product_get_stock_quantity', array( $this, 'include_owned_hold_in_stock' ), 20, 2 );
-			add_filter( 'woocommerce_product_get_stock_status', array( $this, 'include_owned_hold_in_stock_status' ), 20, 2 );
-			add_filter( 'woocommerce_add_cart_item_data', array( $this, 'attach_reservation_to_cart_item' ), 10, 4 );
-			add_action( 'woocommerce_cart_loaded_from_session', array( $this, 'sync_cart_reservations' ) );
-			add_action( 'woocommerce_before_calculate_totals', array( $this, 'sync_cart_reservations' ), 5 );
+		add_filter( 'woocommerce_product_get_stock_status', array( $this, 'include_owned_hold_in_stock_status' ), 20, 2 );
+		add_filter( 'woocommerce_add_cart_item_data', array( $this, 'attach_reservation_to_cart_item' ), 10, 4 );
+		add_action( 'woocommerce_cart_loaded_from_session', array( $this, 'sync_cart_reservations' ) );
+		add_action( 'woocommerce_before_calculate_totals', array( $this, 'sync_cart_reservations' ), 5 );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'copy_reservation_to_order_item' ), 10, 4 );
 		add_filter( 'woocommerce_order_item_quantity', array( $this, 'exclude_linked_hold_from_order_quantity' ), 10, 3 );
 		add_filter( 'woocommerce_order_hold_stock_minutes', array( $this, 'skip_redundant_order_stock_hold' ), 10, 2 );
@@ -68,10 +70,10 @@ class HTP_Reservations {
 		add_action( 'woocommerce_order_status_cancelled', array( $this, 'restore_transferred_order_stock' ), 5 );
 		add_action( 'woocommerce_order_status_failed', array( $this, 'restore_transferred_order_stock' ), 5 );
 
-			add_filter( 'wp_privacy_personal_data_exporters', array( $this, 'register_privacy_exporter' ) );
-			add_filter( 'wp_privacy_personal_data_erasers', array( $this, 'register_privacy_eraser' ) );
-			add_filter( 'site_status_tests', array( $this, 'register_site_health_tests' ) );
-    }
+		add_filter( 'wp_privacy_personal_data_exporters', array( $this, 'register_privacy_exporter' ) );
+		add_filter( 'wp_privacy_personal_data_erasers', array( $this, 'register_privacy_eraser' ) );
+		add_filter( 'site_status_tests', array( $this, 'register_site_health_tests' ) );
+	}
 
 	public function add_cron_schedule( $schedules ) {
 		return $this->expiration->add_cron_schedule( $schedules );
@@ -92,96 +94,99 @@ class HTP_Reservations {
 	public function get_site_health_result() {
 		return $this->expiration->get_site_health_result();
 	}
-    
-    /**
-     * Register custom post type for reservations
-     */
-    public function register_post_type() {
-        register_post_type( 'htp_reservation', array(
-			'labels' => array( 'name' => __( 'Reservations', 'hold-this-product' ) ),
-            'public' => false,
-            'show_ui' => false,
-	            'supports' => array( 'title', 'author' ),
-	            'capability_type' => 'post',
+
+	/**
+	 * Register custom post type for reservations
+	 */
+	public function register_post_type() {
+		register_post_type(
+			'htp_reservation',
+			array(
+				'labels'           => array( 'name' => __( 'Reservations', 'hold-this-product' ) ),
+				'public'           => false,
+				'show_ui'          => false,
+				'supports'         => array( 'title', 'author' ),
+				'capability_type'  => 'post',
 				'delete_with_user' => false,
-	        ) );
-    }
-    
-    /**
-     * Register WooCommerce endpoints
-     */
-    public function register_endpoints() {
-        add_rewrite_endpoint( 'htp-reservations', EP_ROOT | EP_PAGES );
-    }
-    
-    /**
-     * Add query vars for WooCommerce
-     */
-    public function add_query_vars( $vars ) {
-        $vars['htp-reservations'] = 'htp-reservations';
-        return $vars;
-    }
-    
-    /**
-     * Flush rewrite rules (call this on plugin activation)
-     */
-	    public function flush_rewrite_rules() {
-	        $this->register_post_type();
-	        $this->register_endpoints();
-	        flush_rewrite_rules();
-    }
-    
-    /**
-     * Handle reservation AJAX request
-     */
-    public function handle_reservation_ajax() {
-        check_ajax_referer( 'holdthisproduct_nonce', 'security' );
+			)
+		);
+	}
+
+	/**
+	 * Register WooCommerce endpoints
+	 */
+	public function register_endpoints() {
+		add_rewrite_endpoint( 'htp-reservations', EP_ROOT | EP_PAGES );
+	}
+
+	/**
+	 * Add query vars for WooCommerce
+	 */
+	public function add_query_vars( $vars ) {
+		$vars['htp-reservations'] = 'htp-reservations';
+		return $vars;
+	}
+
+	/**
+	 * Flush rewrite rules (call this on plugin activation)
+	 */
+	public function flush_rewrite_rules() {
+		$this->register_post_type();
+		$this->register_endpoints();
+		flush_rewrite_rules();
+	}
+
+	/**
+	 * Handle reservation AJAX request
+	 */
+	public function handle_reservation_ajax() {
+		check_ajax_referer( 'holdthisproduct_nonce', 'security' );
 
 		if ( ! is_user_logged_in() ) {
 			wp_send_json_error( __( 'You must be logged in to reserve products.', 'hold-this-product' ), 401 );
 		}
 
-        $product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
-        if ( ! $product_id ) {
-            wp_send_json_error( __( 'Invalid product ID.', 'hold-this-product' ), 400 );
-        }
+		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
+		if ( ! $product_id ) {
+			wp_send_json_error( __( 'Invalid product ID.', 'hold-this-product' ), 400 );
+		}
 
-        $user_id = get_current_user_id();
-		$result = $this->lifecycle->request( $product_id, $user_id );
+		$user_id = get_current_user_id();
+		$result  = $this->lifecycle->request( $product_id, $user_id );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message(), 400 );
 		}
 		wp_send_json_success( $result['requires_approval'] ? __( 'Reservation request submitted for approval.', 'hold-this-product' ) : __( 'Reservation created successfully.', 'hold-this-product' ) );
-    }
-    
-    /**
-     * Create a new reservation
-     */
-    public function create_reservation( $product_id, $user_id = 0, $guest_email = '' ) {
+	}
+
+	/**
+	 * Create a new reservation
+	 */
+	public function create_reservation( $product_id, $user_id = 0, $guest_email = '' ) {
 		return $this->lifecycle->create( $product_id, $user_id, $guest_email );
-    }
-    
-    /**
-     * Check if product is reservable
-     */
-    public function is_product_reservable( $product_id ) {
+	}
+
+	/**
+	 * Check if product is reservable
+	 */
+	public function is_product_reservable( $product_id ) {
 		return $this->rules->is_product_reservable( $product_id, get_current_user_id() );
-    }
-    
-    /**
-     * Check if reservations are globally enabled
-     */
-    public function are_reservations_globally_enabled() {
+	}
+
+	/**
+	 * Check if reservations are globally enabled
+	 */
+	public function are_reservations_globally_enabled() {
 		return $this->rules->are_reservations_globally_enabled();
-    }
-    
-    /**
-     * Get max reservations per user
-     */
-	    public function get_max_reservations_per_user() {
-		        return $this->rules->get_max_reservations_per_user( get_current_user_id() );
-	    }
+	}
+
+	/**
+	 * Get max reservations per user
+	 */
+	public function get_max_reservations_per_user() {
+			return $this->rules->get_max_reservations_per_user( get_current_user_id() );
+	}
 
 	public function requires_approval( $product_id, $user_id ) {
 		return $this->rules->requires_approval( $product_id, $user_id );
@@ -190,156 +195,163 @@ class HTP_Reservations {
 	public function get_duration_hours( $context, $product_id = 0, $user_id = 0 ) {
 		return $this->rules->get_duration_hours( $context, $product_id, $user_id );
 	}
-    
-    /**
-     * Count active reservations for user
-     */
-    public function count_active_reservations( $user_id = 0, $email = '' ) {
+
+	/**
+	 * Count active reservations for user
+	 */
+	public function count_active_reservations( $user_id = 0, $email = '' ) {
 		return $this->repository->count_active( $user_id, $email );
-    }
-    
-    /**
-     * Check if user has active reservation for specific product
-     */
-    public function user_has_active_reservation_for_product( $product_id, $user_id = 0, $email = '' ) {
+	}
+
+	/**
+	 * Check if user has active reservation for specific product
+	 */
+	public function user_has_active_reservation_for_product( $product_id, $user_id = 0, $email = '' ) {
 		return $this->repository->has_active( $product_id, $user_id, $email );
-    }
-    
-    /**
-     * Expire old reservations
-     */
-    public function expire_old_reservations() {
+	}
+
+	/**
+	 * Expire old reservations
+	 */
+	public function expire_old_reservations() {
 		$this->expiration->expire_old_reservations();
-    }
-    
-    /**
-     * Expire a single reservation
-     */
+	}
+
+	/**
+	 * Expire a single reservation
+	 */
 	public function expire_reservation( $reservation_id ) {
 		return $this->expiration->expire_reservation( $reservation_id );
-    }
-    
-    /**
-     * Cancel a reservation
-     */
+	}
+
+	/**
+	 * Cancel a reservation
+	 */
 	public function cancel_reservation( $reservation_id ) {
 		return $this->lifecycle->cancel( $reservation_id );
-    }
-    
-    /**
-     * Add reservations to WooCommerce account menu
-     */
-    public function add_account_menu_item( $items ) {
-        $new = array();
-        foreach ( $items as $key => $label ) {
-            if ( $key === 'customer-logout' ) {
-                $new['htp-reservations'] = __( 'Reserved products', 'hold-this-product' );
-            }
-            $new[$key] = $label;
-        }
-        if ( ! isset( $new['htp-reservations'] ) ) {
-            $new['htp-reservations'] = __( 'Reserved products', 'hold-this-product' );
-        }
-        return $new;
-    }
-    
-    /**
-     * Change endpoint title for reservations
-     */
-    public function reservations_endpoint_title( $title ) {
-        return __( 'Reserved products', 'hold-this-product' );
-    }
-    
-    /**
-     * Change page title when on reservations page
-     */
-    public function change_reservations_page_title( $title ) {
-        global $wp_query;
-        
-        if ( ! is_admin() && is_main_query() && in_the_loop() && is_account_page() ) {
-            // Check if we're on the reservations endpoint
-            if ( isset( $wp_query->query_vars['htp-reservations'] ) || 
-                 ( function_exists( 'wc_get_page_id' ) && is_wc_endpoint_url( 'htp-reservations' ) ) ) {
-                return __( 'Reservations', 'hold-this-product' );
-            }
-        }
-        
-        return $title;
-    }
-    
-    /**
-     * Display reservations in My Account
-     */
-    public function reservations_endpoint_content() {
-        // Prevent double rendering
-        static $rendered = false;
-        if ( $rendered ) {
-            return;
-        }
-        $rendered = true;
-        
-        if ( ! is_user_logged_in() ) {
-            wc_print_notice( __( 'Please log in to see your reservations.', 'hold-this-product' ), 'notice' );
-            return;
-        }
-        
+	}
+
+	/**
+	 * Add reservations to WooCommerce account menu
+	 */
+	public function add_account_menu_item( $items ) {
+		$new = array();
+		foreach ( $items as $key => $label ) {
+			if ( 'customer-logout' === $key ) {
+				$new['htp-reservations'] = __( 'Reserved products', 'hold-this-product' );
+			}
+			$new[ $key ] = $label;
+		}
+		if ( ! isset( $new['htp-reservations'] ) ) {
+			$new['htp-reservations'] = __( 'Reserved products', 'hold-this-product' );
+		}
+		return $new;
+	}
+
+	/**
+	 * Change endpoint title for reservations
+	 */
+	public function reservations_endpoint_title( $title ) {
+		return __( 'Reserved products', 'hold-this-product' );
+	}
+
+	/**
+	 * Change page title when on reservations page
+	 */
+	public function change_reservations_page_title( $title ) {
+		global $wp_query;
+
+		if ( ! is_admin() && is_main_query() && in_the_loop() && is_account_page() ) {
+			// Check if we're on the reservations endpoint
+			if ( isset( $wp_query->query_vars['htp-reservations'] ) ||
+				( function_exists( 'wc_get_page_id' ) && is_wc_endpoint_url( 'htp-reservations' ) ) ) {
+				return __( 'Reservations', 'hold-this-product' );
+			}
+		}
+
+		return $title;
+	}
+
+	/**
+	 * Display reservations in My Account
+	 */
+	public function reservations_endpoint_content() {
+		// Prevent double rendering
+		static $rendered = false;
+		if ( $rendered ) {
+			return;
+		}
+		$rendered = true;
+
+		if ( ! is_user_logged_in() ) {
+			wc_print_notice( __( 'Please log in to see your reservations.', 'hold-this-product' ), 'notice' );
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only pagination.
 		$current_page = isset( $_GET['reservation-page'] ) ? max( 1, absint( wp_unslash( $_GET['reservation-page'] ) ) ) : 1;
-		$query = new WP_Query( array(
-            'post_type'      => 'htp_reservation',
-            'post_status'    => 'publish',
-            'author'         => get_current_user_id(),
-			'posts_per_page' => 20,
-			'paged'          => $current_page,
-            'meta_query'     => array(
-                array(
-					'key'     => HTP_Reservation_Meta::STATUS,
-                    'compare' => 'EXISTS',
-                ),
-            ),
-            'orderby' => 'date',
-            'order' => 'DESC'
-		) );
+		$query        = new WP_Query(
+			array(
+				'post_type'      => 'htp_reservation',
+				'post_status'    => 'publish',
+				'author'         => get_current_user_id(),
+				'posts_per_page' => 20,
+				'paged'          => $current_page,
+				'meta_query'     => array(
+					array(
+						'key'     => HTP_Reservation_Meta::STATUS,
+						'compare' => 'EXISTS',
+					),
+				),
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			)
+		);
 		$reservations = $query->posts;
-        
-        if ( empty( $reservations ) ) {
-            wc_print_notice( __( 'You have no reservations.', 'hold-this-product' ), 'notice' );
-            return;
-        }
-        
-        // Use WooCommerce's built-in table structure for consistency
-        wc_get_template( 'myaccount/my-reservations.php', array(
-            'reservations' => $reservations,
-			'current_page' => $current_page,
-			'total_pages'  => (int) $query->max_num_pages,
-        ), '', HTP_PLUGIN_PATH . 'templates/' );
-    }
-    
-    /**
-     * Handle reservation actions (cancel, etc.)
-     */
-    public function handle_reservation_actions() {
+
+		if ( empty( $reservations ) ) {
+			wc_print_notice( __( 'You have no reservations.', 'hold-this-product' ), 'notice' );
+			return;
+		}
+
+		// Use WooCommerce's built-in table structure for consistency
+		wc_get_template(
+			'myaccount/my-reservations.php',
+			array(
+				'reservations' => $reservations,
+				'current_page' => $current_page,
+				'total_pages'  => (int) $query->max_num_pages,
+			),
+			'',
+			HTP_PLUGIN_PATH . 'templates/'
+		);
+	}
+
+	/**
+	 * Handle reservation actions (cancel, etc.)
+	 */
+	public function handle_reservation_actions() {
 		if ( ! is_user_logged_in() || 'POST' !== strtoupper( isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '' ) || ! isset( $_POST['htp_cancel_res'] ) ) {
-            return;
-        }
+			return;
+		}
 
 		$reservation_id = absint( wp_unslash( $_POST['htp_cancel_res'] ) );
-		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		$nonce          = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		if ( ! $reservation_id || ! wp_verify_nonce( $nonce, 'htp_cancel_res_' . $reservation_id ) ) {
-            return;
-        }
-        
-        $post = get_post( $reservation_id );
-		if ( ! $post || 'htp_reservation' !== $post->post_type || (int) $post->post_author !== get_current_user_id() ) {
-            return;
-        }
-        
-        $this->cancel_reservation( $reservation_id );
-        wp_safe_redirect( wc_get_account_endpoint_url( 'htp-reservations' ) );
-        exit;
-    }
-    
-    /** Give the reservation owner access to the physical unit already held for them. */
+			return;
+		}
+
+		$post = get_post( $reservation_id );
+		if ( ! $post || 'htp_reservation' !== $post->post_type || get_current_user_id() !== (int) $post->post_author ) {
+			return;
+		}
+
+		$this->cancel_reservation( $reservation_id );
+		wp_safe_redirect( wc_get_account_endpoint_url( 'htp-reservations' ) );
+		exit;
+	}
+
+	/** Give the reservation owner access to the physical unit already held for them. */
 	public function include_owned_hold_in_stock( $stock, $product ) {
 		return $this->cart_order->include_owned_hold_in_stock( $stock, $product );
 	}
@@ -392,40 +404,40 @@ class HTP_Reservations {
 		return $this->cart_order->hide_reservation_order_item_meta( $keys );
 	}
 
-    /** Auto-fulfill reservations when order is completed (legacy callback). */
+	/** Auto-fulfill reservations when order is completed (legacy callback). */
 	public function fulfill_reservation_on_purchase( $order_id ) {
 		$this->cart_order->fulfill_reservation_on_purchase( $order_id );
 	}
-    
-    /**
-     * Approve a pending reservation
-     */
-    public function approve_reservation( $reservation_id ) {
-		return $this->lifecycle->approve( $reservation_id );
-    }
-    
-    /**
-     * Deny a pending reservation
-     */
-    public function deny_reservation( $reservation_id, $reason = '' ) {
-		return $this->lifecycle->deny( $reservation_id, $reason );
-    }
 
-    /**
-     * Count "open" reservations for a user (active + pending approval).
-     *
-     * Pending approvals count towards limits to prevent spamming requests.
-     */
+	/**
+	 * Approve a pending reservation
+	 */
+	public function approve_reservation( $reservation_id ) {
+		return $this->lifecycle->approve( $reservation_id );
+	}
+
+	/**
+	 * Deny a pending reservation
+	 */
+	public function deny_reservation( $reservation_id, $reason = '' ) {
+		return $this->lifecycle->deny( $reservation_id, $reason );
+	}
+
+	/**
+	 * Count "open" reservations for a user (active + pending approval).
+	 *
+	 * Pending approvals count towards limits to prevent spamming requests.
+	 */
 	public function count_open_reservations( $user_id = 0 ) {
 		return $this->repository->count_open( $user_id );
-    }
+	}
 
-    /**
-     * Check if a user already has an open reservation request for a product (active + pending approval).
-     */
+	/**
+	 * Check if a user already has an open reservation request for a product (active + pending approval).
+	 */
 	public function user_has_open_reservation_for_product( $product_id, $user_id = 0 ) {
 		return $this->repository->user_has_open_for_product( $product_id, $user_id );
-    }
+	}
 
 	public function register_privacy_exporter( $exporters ) {
 		return $this->privacy->register_exporter( $exporters );
