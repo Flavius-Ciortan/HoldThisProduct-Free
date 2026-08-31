@@ -164,6 +164,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<span class="htp-status-badge htp-status-badge--<?php echo esc_attr( $badge_variant ); ?>">
 						<?php echo esc_html( $status_label ); ?>
 					</span>
+					<?php do_action( 'htp_myaccount_reservation_details', $reservation->ID, $status ); ?>
 				</td>
 				<td class="woocommerce-orders-table__cell woocommerce-orders-table__cell-order-expires" data-title="<?php esc_attr_e( 'Expires', 'hold-this-product' ); ?>">
 						<?php if ( ( $is_active || $is_pending || $is_expired ) && $expires_ts ) : ?>

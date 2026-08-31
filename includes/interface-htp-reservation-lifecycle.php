@@ -15,4 +15,6 @@ interface HTP_Reservation_Lifecycle_Interface {
 	public function deny( $reservation_id, $reason = '' );
 
 	public function cancel( $reservation_id );
+
+	public function extend( $reservation_id, $additional_hours, $source = 'extension' );
 }

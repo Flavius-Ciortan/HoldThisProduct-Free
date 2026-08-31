@@ -280,6 +280,48 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 		return true;
 	}
 
+	public function extend( $reservation_id, $additional_hours, $source = 'extension' ) {
+		$reservation_id   = absint( $reservation_id );
+		$additional_hours = max( 1, min( 168, absint( $additional_hours ) ) );
+		if ( 'htp_reservation' !== get_post_type( $reservation_id ) ) {
+			return new WP_Error( 'htp_invalid_reservation', __( 'Invalid reservation.', 'hold-this-product' ) );
+		}
+
+		$product_id = (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID );
+		$user_id    = (int) get_post_field( 'post_author', $reservation_id );
+		$locks      = $this->locks->acquire( array( 'product_' . $product_id, 'user_' . $user_id ) );
+		if ( is_wp_error( $locks ) ) {
+			return $locks;
+		}
+
+		try {
+			$status     = (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
+			$expires_at = (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT );
+			if ( ! in_array( $status, HTP_Reservation_Status::open(), true ) || $expires_at <= time() ) {
+				return new WP_Error( 'htp_not_extendable', __( 'This reservation can no longer be extended.', 'hold-this-product' ) );
+			}
+			$new_expires_at = $expires_at + ( $additional_hours * HOUR_IN_SECONDS );
+			if ( ! HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT, $new_expires_at, $expires_at ) ) {
+				return new WP_Error( 'htp_extension_conflict', __( 'The reservation deadline changed before it could be extended.', 'hold-this-product' ) );
+			}
+		} finally {
+			$this->locks->release( $locks );
+		}
+
+		do_action(
+			'htp_reservation_extended',
+			array(
+				'reservation_id'   => $reservation_id,
+				'previous_expiry'  => $expires_at,
+				'new_expiry'       => $new_expires_at,
+				'additional_hours' => $additional_hours,
+				'source'           => sanitize_key( $source ),
+				'occurred_at'      => time(),
+			)
+		);
+		return $new_expires_at;
+	}
+
 	private function announce_transition( $reservation_id, $from, $to, $source ) {
 		do_action(
 			'htp_reservation_transitioned',

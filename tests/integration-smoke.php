@@ -129,7 +129,45 @@ htp_assert( $htp_immediate_product_id === (int) HTP_Reservation_Meta::get( $htp_
 htp_assert( ! empty( $htp_transitions ) && HTP_Reservation_Status::ACTIVE === $htp_transitions[0]['to'], 'Lifecycle transition action receives a stable transition payload.' );
 htp_assert( HTP_Inventory_Manager::STATE_HELD === get_post_meta( $htp_immediate_id, HTP_Inventory_Manager::META_STATE, true ), 'Immediate reservation records held inventory ownership.' );
 htp_assert( 1 === (int) wc_get_product( $htp_immediate_product_id )->get_stock_quantity( 'edit' ), 'Immediate reservation decreases stock once.' );
+$htp_expiry_before_extension = (int) HTP_Reservation_Meta::get( $htp_immediate_id, HTP_Reservation_Meta::EXPIRES_AT );
+$htp_extension_event = array();
+$htp_extension_listener = static function ( $event ) use ( &$htp_extension_event ) {
+	$htp_extension_event = $event;
+};
+add_action( 'htp_reservation_extended', $htp_extension_listener );
+$htp_extended_expiry = $htp_plugin->get_service( 'lifecycle' )->extend( $htp_immediate_id, 2, 'contract_test' );
+htp_assert( $htp_expiry_before_extension + ( 2 * HOUR_IN_SECONDS ) === $htp_extended_expiry, 'Lifecycle extends an open deadline by the exact requested duration.' );
+htp_assert( $htp_immediate_id === $htp_extension_event['reservation_id'] && 'contract_test' === $htp_extension_event['source'], 'Deadline extension emits its stable result contract.' );
+$htp_email_content_seen = array();
+$htp_email_result_seen = array();
+$htp_email_filter = static function ( $content, $event, $reservation_id ) use ( &$htp_email_content_seen, $htp_immediate_id ) {
+	if ( $htp_immediate_id === $reservation_id && 'created' === $event ) {
+		$content['subject']     = 'Contract-filtered subject';
+		$htp_email_content_seen = $content;
+	}
+	return $content;
+};
+$htp_mail_short_circuit = static function () {
+	return true;
+};
+$htp_email_result_listener = static function ( $sent, $event, $reservation_id ) use ( &$htp_email_result_seen, $htp_immediate_id ) {
+	if ( $htp_immediate_id === $reservation_id && 'created' === $event ) {
+		$htp_email_result_seen = array( $sent, $event, $reservation_id );
+	}
+};
+add_filter( 'htp_email_content', $htp_email_filter, 10, 3 );
+add_filter( 'pre_wp_mail', $htp_mail_short_circuit );
+add_action( 'htp_email_sent', $htp_email_result_listener, 10, 3 );
+update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 0, 'enable_email_notifications' => 1 ) );
+$htp_plugin->get_service( 'notifications' )->dispatch( 'created', $htp_immediate_id, 'htp@example.test' );
+htp_assert( 'Contract-filtered subject' === $htp_email_content_seen['subject'], 'Transactional email content is filtered once before delivery.' );
+htp_assert( true === $htp_email_result_seen[0], 'Transactional email result event reports the mail transport result.' );
+remove_filter( 'htp_email_content', $htp_email_filter, 10 );
+remove_filter( 'pre_wp_mail', $htp_mail_short_circuit );
+remove_action( 'htp_email_sent', $htp_email_result_listener, 10 );
+update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 0, 'enable_email_notifications' => 0 ) );
 htp_assert( $htp_plugin->reservations->cancel_reservation( $htp_immediate_id ), 'Immediate reservation can be cancelled.' );
+htp_assert( is_wp_error( $htp_plugin->get_service( 'lifecycle' )->extend( $htp_immediate_id, 2 ) ), 'Terminal reservations cannot be extended.' );
 $htp_counts_after_cancel = $htp_plugin->reservations->get_status_counts();
 htp_assert( $htp_counts_before_immediate[ HTP_Reservation_Status::ACTIVE ] === $htp_counts_after_cancel[ HTP_Reservation_Status::ACTIVE ], 'Status-count cache is invalidated when an active reservation is cancelled.' );
 htp_assert( HTP_Inventory_Manager::STATE_RELEASED === get_post_meta( $htp_immediate_id, HTP_Inventory_Manager::META_STATE, true ), 'Cancellation records released inventory ownership.' );
@@ -318,6 +356,7 @@ $htp_order->delete( true );
 wp_delete_user( $htp_privacy_user_id );
 wp_delete_user( $htp_user_id );
 remove_action( 'htp_reservation_transitioned', $htp_transition_listener );
+remove_action( 'htp_reservation_extended', $htp_extension_listener );
 if ( false === $htp_original_options ) {
 	delete_option( 'holdthisproduct_options' );
 } else {

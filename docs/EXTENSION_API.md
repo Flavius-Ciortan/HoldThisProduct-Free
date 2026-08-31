@@ -40,9 +40,12 @@ create( $product_id, $user_id = 0, $guest_email = '', $quantity = 1 );
 approve( $reservation_id );
 deny( $reservation_id, $reason = '' );
 cancel( $reservation_id );
+extend( $reservation_id, $additional_hours, $source = 'extension' );
 ```
 
 Methods return their documented success value or `WP_Error`. Callers must preserve the returned error and must not update reservation status or WooCommerce stock directly.
+
+`extend()` changes an unexpired open reservation deadline while holding the same product/customer locks used by lifecycle transitions. Add-ons must use it instead of writing `_htp_expires_at` directly.
 
 Free resolves every request to one unit. Add-ons may use the quantity and inventory-support filters below to enable multi-unit or variation reservations. The resolved quantity is stored in canonical reservation metadata and remains visible when an add-on is disabled.
 
@@ -155,6 +158,18 @@ do_action( 'htp_reservation_event', string $event, int $reservation_id, string $
 ```
 
 Canonical events are `created`, `pending`, `approved`, `expired`, and `denied`. This event is the preferred integration point for custom email, webhook, or messaging providers. Free also emits its legacy event-specific hooks for backward compatibility.
+
+### `htp_email_content`
+
+```php
+apply_filters( 'htp_email_content', array $content, string $event, int $reservation_id );
+```
+
+Filters Free's final transactional email once, immediately before `wp_mail()`. The content keys are `to`, `subject`, `body`, and `headers`. Returning an invalid recipient suppresses delivery. `htp_email_sent` runs afterward with the boolean mail result, event, reservation ID, and final content.
+
+### `htp_reservation_extended`
+
+Runs after a locked deadline extension and receives a read-only array containing `reservation_id`, `previous_expiry`, `new_expiry`, `additional_hours`, `source`, and `occurred_at`.
 
 ## Dependency Notices
 

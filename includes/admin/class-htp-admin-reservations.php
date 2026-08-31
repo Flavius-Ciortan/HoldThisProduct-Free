@@ -520,6 +520,7 @@ class HTP_Admin_Reservations {
 		echo '</td>';
 		echo '<td title="' . esc_attr( $customer ) . '">' . esc_html( $customer ) . '</td>';
 		echo '<td><span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_display ) . '</span></td>';
+		do_action( 'htp_admin_reservation_row_details', $reservation->ID, $status );
 		echo '<td>' . esc_html( $reserved_date ) . '</td>';
 		echo '<td>' . esc_html( $expires_disp ) . '</td>';
 		echo '<td class="' . esc_attr( $time_class ) . '">' . esc_html( $time_left ) . '</td>';

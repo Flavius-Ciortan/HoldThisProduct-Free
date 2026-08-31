@@ -237,6 +237,10 @@ class HTP_Reservations {
 		return $this->lifecycle->cancel( $reservation_id );
 	}
 
+	public function extend_reservation( $reservation_id, $additional_hours, $source = 'extension' ) {
+		return $this->lifecycle->extend( $reservation_id, $additional_hours, $source );
+	}
+
 	/**
 	 * Add reservations to WooCommerce account menu
 	 */
