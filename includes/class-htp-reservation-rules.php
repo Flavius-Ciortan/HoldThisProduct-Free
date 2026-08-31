@@ -22,7 +22,8 @@ final class HTP_Reservation_Rules {
 		$guest_email = sanitize_email( $guest_email );
 		$user_id     = absint( $guest_email ? $user_id : ( $user_id ? $user_id : get_current_user_id() ) );
 		$guest       = ! $user_id && $guest_email && is_email( $guest_email );
-		if ( ! $user_id && ( ! $guest || ! apply_filters( 'htp_allow_guest_reservations', false, $product_id, $guest_email ) ) ) {
+		$guest_ui    = ! $user_id && ! $guest && apply_filters( 'htp_guest_reservation_frontend_enabled', false );
+		if ( ! $user_id && ! $guest_ui && ( ! $guest || ! apply_filters( 'htp_allow_guest_reservations', false, $product_id, $guest_email ) ) ) {
 			return false;
 		}
 

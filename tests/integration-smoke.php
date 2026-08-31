@@ -252,6 +252,14 @@ $htp_guest_product->set_stock_quantity( 2 );
 $htp_guest_product_id = $htp_guest_product->save();
 $htp_guest_key        = strtolower( wp_generate_password( 8, false ) );
 $htp_guest_email      = 'htp-verified-guest-' . $htp_guest_key . '@example.test';
+$htp_guest_frontend = static function () {
+	return true;
+};
+wp_set_current_user( 0 );
+add_filter( 'htp_guest_reservation_frontend_enabled', $htp_guest_frontend );
+htp_assert( $htp_plugin->reservations->is_product_reservable( $htp_guest_product_id ), 'An add-on can expose anonymous reservation UI without inventing a verified identity.' );
+remove_filter( 'htp_guest_reservation_frontend_enabled', $htp_guest_frontend );
+wp_set_current_user( $htp_user_id );
 $htp_guest_disabled   = $htp_plugin->get_service( 'lifecycle' )->request_guest( $htp_guest_product_id, $htp_guest_email );
 htp_assert( is_wp_error( $htp_guest_disabled ) && 'htp_not_reservable' === $htp_guest_disabled->get_error_code(), 'Free guest lifecycle remains disabled without an explicit extension opt-in.' );
 $htp_guest_opt_in = static function () {
