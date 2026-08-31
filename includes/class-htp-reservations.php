@@ -9,20 +9,21 @@ class HTP_Reservations {
 
 	const CRON_HOOK = 'htp_expire_reservations';
 
-	private $allowance_cache = array();
 	private $inventory;
 	private $notifications;
 	private $privacy;
 	private $repository;
+	private $cart_order;
     
     /**
      * Constructor
      */
-	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null ) {
+	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null ) {
 			$this->inventory = $inventory instanceof HTP_Inventory_Manager ? $inventory : new HTP_Inventory_Manager();
 			$this->notifications = $notifications instanceof HTP_Notification_Dispatcher ? $notifications : new HTP_Notification_Dispatcher();
 			$this->privacy = $privacy instanceof HTP_Privacy_Service ? $privacy : new HTP_Privacy_Service();
 			$this->repository = $repository instanceof HTP_Reservation_Repository ? $repository : new HTP_Reservation_Repository();
+			$this->cart_order = $cart_order instanceof HTP_Cart_Order_Service ? $cart_order : new HTP_Cart_Order_Service( $this->inventory, $this->repository );
 	        $this->init();
     }
     
@@ -210,7 +211,7 @@ class HTP_Reservations {
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message(), 400 );
 		}
-		$this->allowance_cache = array();
+		$this->cart_order->clear_cache();
 		wp_send_json_success( $require_approval ? __( 'Reservation request submitted for approval.', 'hold-this-product' ) : __( 'Reservation created successfully.', 'hold-this-product' ) );
     }
     
@@ -441,7 +442,7 @@ class HTP_Reservations {
         if ( $email ) {
 	            $this->notifications->dispatch( 'expired', $reservation_id, $email );
         }
-		$this->allowance_cache = array();
+		$this->cart_order->clear_cache();
 		return true;
     }
     
@@ -458,7 +459,7 @@ class HTP_Reservations {
 		if ( is_wp_error( $result ) ) {
 			return false;
 		}
-		$this->allowance_cache = array();
+		$this->cart_order->clear_cache();
 		return true;
     }
     
@@ -577,40 +578,15 @@ class HTP_Reservations {
     
     /** Give the reservation owner access to the physical unit already held for them. */
 	public function include_owned_hold_in_stock( $stock, $product ) {
-		if ( ! is_user_logged_in() || ! $product instanceof WC_Product || null === $stock ) {
-			return $stock;
-		}
-		return (int) $stock + $this->get_owned_hold_allowance( $product->get_id() );
+		return $this->cart_order->include_owned_hold_in_stock( $stock, $product );
 	}
 
 	public function include_owned_hold_in_stock_status( $status, $product ) {
-		if ( 'outofstock' === $status && is_user_logged_in() && $product instanceof WC_Product && $this->get_owned_hold_allowance( $product->get_id() ) > 0 ) {
-			return 'instock';
-		}
-		return $status;
-	}
-
-	private function get_owned_hold_allowance( $product_id ) {
-		$product_id = absint( $product_id );
-		if ( ! array_key_exists( $product_id, $this->allowance_cache ) ) {
-			$this->allowance_cache[ $product_id ] = $this->find_active_reservation( $product_id, get_current_user_id() ) ? 1 : 0;
-		}
-		return $this->allowance_cache[ $product_id ];
-	}
-
-	private function find_active_reservation( $product_id, $user_id ) {
-		return $this->repository->find_active( $product_id, $user_id );
+		return $this->cart_order->include_owned_hold_in_stock_status( $status, $product );
 	}
 
 	public function attach_reservation_to_cart_item( $cart_item_data, $product_id, $variation_id, $quantity ) {
-		unset( $variation_id, $quantity );
-		if ( is_user_logged_in() ) {
-			$reservation_id = $this->find_active_reservation( $product_id, get_current_user_id() );
-			if ( $reservation_id ) {
-				$cart_item_data['_htp_reservation_id'] = $reservation_id;
-			}
-		}
-		return $cart_item_data;
+		return $this->cart_order->attach_reservation_to_cart_item( $cart_item_data, $product_id, $variation_id, $quantity );
 	}
 
 	/**
@@ -620,30 +596,11 @@ class HTP_Reservations {
 	 * cart. Checkout must use current reservation ownership, not historical hook order.
 	 */
 	public function sync_cart_reservations( $cart ) {
-		if ( ! is_user_logged_in() || ! $cart instanceof WC_Cart ) {
-			return;
-		}
-
-		$user_id = get_current_user_id();
-		$seen    = array();
-		foreach ( $cart->cart_contents as $cart_item_key => $cart_item ) {
-			$product_id     = absint( isset( $cart_item['variation_id'] ) && $cart_item['variation_id'] ? $cart_item['variation_id'] : ( $cart_item['product_id'] ?? 0 ) );
-			$reservation_id = $product_id ? $this->find_active_reservation( $product_id, $user_id ) : 0;
-
-			if ( $reservation_id && ! isset( $seen[ $reservation_id ] ) ) {
-				$cart->cart_contents[ $cart_item_key ]['_htp_reservation_id'] = $reservation_id;
-				$seen[ $reservation_id ] = true;
-			} else {
-				unset( $cart->cart_contents[ $cart_item_key ]['_htp_reservation_id'] );
-			}
-		}
+		$this->cart_order->sync_cart_reservations( $cart );
 	}
 
 	public function copy_reservation_to_order_item( $item, $cart_item_key, $values, $order ) {
-		unset( $cart_item_key, $order );
-		if ( ! empty( $values['_htp_reservation_id'] ) ) {
-			$item->add_meta_data( '_htp_reservation_id', absint( $values['_htp_reservation_id'] ), true );
-		}
+		$this->cart_order->copy_reservation_to_order_item( $item, $cart_item_key, $values, $order );
 	}
 
 	/**
@@ -651,148 +608,31 @@ class HTP_Reservations {
 	 * stock reservation and reduction calculations.
 	 */
 	public function exclude_linked_hold_from_order_quantity( $quantity, $order, $item ) {
-		if ( ! $order instanceof WC_Order || ! $item instanceof WC_Order_Item_Product ) {
-			return $quantity;
-		}
-
-		$reservation_id = absint( $item->get_meta( '_htp_reservation_id', true ) );
-		if ( ! $reservation_id || ! $this->reservation_is_available_to_order( $reservation_id, $order, $item ) ) {
-			return $quantity;
-		}
-
-		return max( 0, (float) $quantity - 1 );
+		return $this->cart_order->exclude_linked_hold_from_order_quantity( $quantity, $order, $item );
 	}
 
 	/** Skip WooCommerce's DB hold when this plugin already holds every stock-managed unit. */
 	public function skip_redundant_order_stock_hold( $minutes, $order ) {
-		if ( ! $order instanceof WC_Order ) {
-			return $minutes;
-		}
-
-		$has_linked_hold = false;
-		foreach ( $order->get_items() as $item ) {
-			if ( ! $item instanceof WC_Order_Item_Product ) {
-				continue;
-			}
-			$product = $item->get_product();
-			if ( ! $product || ! $product->managing_stock() || $product->backorders_allowed() ) {
-				continue;
-			}
-
-			$quantity = (float) $item->get_quantity();
-			$remaining_quantity = (float) $this->exclude_linked_hold_from_order_quantity( $quantity, $order, $item );
-			if ( $remaining_quantity >= $quantity || $remaining_quantity > 0 ) {
-				return $minutes;
-			}
-			$has_linked_hold = true;
-		}
-
-		return $has_linked_hold ? 0 : $minutes;
+		return $this->cart_order->skip_redundant_order_stock_hold( $minutes, $order );
 	}
 
 	/** Check an active hold, or the same hold after it was transferred to this order. */
-	private function reservation_is_available_to_order( $reservation_id, $order, $item ) {
-		if ( 'htp_reservation' !== get_post_type( $reservation_id )
-			|| (int) get_post_field( 'post_author', $reservation_id ) !== (int) $order->get_customer_id()
-			|| (int) get_post_meta( $reservation_id, '_htp_product_id', true ) !== (int) $item->get_product_id() ) {
-			return false;
-		}
-
-		$status = get_post_meta( $reservation_id, '_htp_status', true );
-		if ( 'active' === $status ) {
-			return (int) get_post_meta( $reservation_id, '_htp_expires_at', true ) > time();
-		}
-
-		return 'fulfilled' === $status && (int) get_post_meta( $reservation_id, '_htp_order_id', true ) === (int) $order->get_id();
-	}
-
-	private function reservation_matches_order_item( $reservation_id, $user_id, $product_id ) {
-		return 'htp_reservation' === get_post_type( $reservation_id )
-			&& (int) get_post_field( 'post_author', $reservation_id ) === (int) $user_id
-			&& (int) get_post_meta( $reservation_id, '_htp_product_id', true ) === (int) $product_id
-			&& 'active' === get_post_meta( $reservation_id, '_htp_status', true )
-			&& (int) get_post_meta( $reservation_id, '_htp_expires_at', true ) > time();
-	}
-
 	public function transfer_holds_to_order( $order ) {
-		if ( ! $order instanceof WC_Order || $order->get_meta( '_htp_holds_transferred', true ) ) {
-			return;
-		}
-		$seen = array();
-		foreach ( $order->get_items() as $item ) {
-			$reservation_id = absint( $item->get_meta( '_htp_reservation_id', true ) );
-			if ( ! $reservation_id ) {
-				continue;
-			}
-			if ( isset( $seen[ $reservation_id ] ) || ! $this->reservation_matches_order_item( $reservation_id, $order->get_customer_id(), $item->get_product_id() ) ) {
-				throw new WC_Data_Exception( 'htp_invalid_order_hold', esc_html__( 'A reservation could not be transferred to the order.', 'hold-this-product' ) );
-			}
-			$seen[ $reservation_id ] = true;
-		}
-
-		$applied = array();
-		try {
-			foreach ( $order->get_items() as $item ) {
-				$reservation_id = absint( $item->get_meta( '_htp_reservation_id', true ) );
-				if ( ! $reservation_id ) {
-					continue;
-				}
-				$quantity = max( 1, (int) $item->get_quantity() );
-				$remainder = max( 0, $quantity - 1 );
-				$product = $item->get_product();
-				$item->update_meta_data( '_reduced_stock', $quantity );
-				$item->save();
-				$transfer_result = $this->inventory->transfer_to_order( $reservation_id, $order->get_id(), $product, $remainder );
-				if ( is_wp_error( $transfer_result ) ) {
-					$item->delete_meta_data( '_reduced_stock' );
-					$item->save();
-					throw new WC_Data_Exception( 'htp_transfer_race', $transfer_result->get_error_message() );
-				}
-				$applied[] = array( $reservation_id, $item, $remainder );
-			}
-		} catch ( Throwable $error ) {
-			foreach ( array_reverse( $applied ) as $entry ) {
-				list( $reservation_id, $item, $remainder ) = $entry;
-				$this->inventory->rollback_order_transfer( $reservation_id, $item->get_product(), $remainder );
-				$item->delete_meta_data( '_reduced_stock' );
-				$item->save();
-			}
-			throw $error;
-		}
-		if ( $seen ) {
-			$order->update_meta_data( '_htp_holds_transferred', 'yes' );
-			$order->save();
-		}
-		$this->allowance_cache = array();
+		$this->cart_order->transfer_holds_to_order( $order );
 	}
 
 	public function restore_transferred_order_stock( $order_id ) {
-		$order = wc_get_order( $order_id );
-		if ( ! $order || ! $order->get_meta( '_htp_holds_transferred', true ) ) return;
-		foreach ( $order->get_items() as $item ) {
-			$reservation_id = absint( $item->get_meta( '_htp_reservation_id', true ) );
-			if ( ! $reservation_id ) continue;
-			$product = $item->get_product();
-			$quantity = max( 1, (int) $item->get_meta( '_reduced_stock', true ) );
-			$result = $this->inventory->restore_cancelled_order( $reservation_id, $product, $quantity );
-			if ( is_wp_error( $result ) ) continue;
-			$item->delete_meta_data( '_reduced_stock' );
-			$item->save();
-		}
+		$this->cart_order->restore_transferred_order_stock( $order_id );
 	}
 
 	public function hide_reservation_order_item_meta( $keys ) {
-		$keys[] = '_htp_reservation_id';
-		return array_unique( $keys );
+		return $this->cart_order->hide_reservation_order_item_meta( $keys );
 	}
 
     /** Auto-fulfill reservations when order is completed (legacy callback). */
-    public function fulfill_reservation_on_purchase( $order_id ) {
-        $order = wc_get_order( $order_id );
-		if ( $order ) {
-			$this->transfer_holds_to_order( $order );
-		}
-    }
+	public function fulfill_reservation_on_purchase( $order_id ) {
+		$this->cart_order->fulfill_reservation_on_purchase( $order_id );
+	}
     
     /**
      * Approve a pending reservation
@@ -849,7 +689,7 @@ class HTP_Reservations {
 	            $this->notifications->dispatch( 'approved', $reservation_id, $email );
         }
         
-		$this->allowance_cache = array();
+		$this->cart_order->clear_cache();
 		return true;
     }
     

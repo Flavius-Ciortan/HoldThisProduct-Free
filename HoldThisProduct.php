@@ -125,6 +125,7 @@ class HoldThisProduct {
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
+        require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
@@ -156,7 +157,8 @@ class HoldThisProduct {
 		$repository    = $this->services->set( 'repository', new HTP_Reservation_Repository() );
 		$notifications = $this->services->set( 'notifications', new HTP_Notification_Dispatcher() );
 		$privacy       = $this->services->set( 'privacy', new HTP_Privacy_Service() );
-        $this->reservations = $this->services->set( 'reservations', new HTP_Reservations( $inventory, $notifications, $privacy, $repository ) );
+		$cart_order    = $this->services->set( 'cart_order', new HTP_Cart_Order_Service( $inventory, $repository ) );
+        $this->reservations = $this->services->set( 'reservations', new HTP_Reservations( $inventory, $notifications, $privacy, $repository, $cart_order ) );
         $this->services->set( 'email_manager', new HTP_Email_Manager() );
         
         // Initialize admin
@@ -191,6 +193,7 @@ class HoldThisProduct {
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
+        require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
