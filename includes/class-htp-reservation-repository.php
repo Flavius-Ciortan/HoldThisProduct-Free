@@ -115,82 +115,72 @@ final class HTP_Reservation_Repository implements HTP_Reservation_Repository_Int
 		return ! empty( get_posts( $args ) );
 	}
 
-	public function count_open( $user_id ) {
-		if ( $user_id <= 0 ) {
-			return 0;
-		}
-		$query = new WP_Query(
-			array(
-				'post_type'      => 'htp_reservation',
-				'post_status'    => 'publish',
-				'fields'         => 'ids',
-				'posts_per_page' => 1,
-				'author'         => absint( $user_id ),
-				'meta_query'     => array(
-					'relation' => 'OR',
-					array(
-						'relation' => 'AND',
-						array(
-							'key'   => HTP_Reservation_Meta::STATUS,
-							'value' => HTP_Reservation_Status::PENDING,
-						),
-						array(
-							'key'     => HTP_Reservation_Meta::EXPIRES_AT,
-							'value'   => time(),
-							'type'    => 'NUMERIC',
-							'compare' => '>',
-						),
-					),
-					array(
-						'relation' => 'AND',
-						array(
-							'key'   => HTP_Reservation_Meta::STATUS,
-							'value' => HTP_Reservation_Status::ACTIVE,
-						),
-						array(
-							'key'     => HTP_Reservation_Meta::EXPIRES_AT,
-							'value'   => time(),
-							'type'    => 'NUMERIC',
-							'compare' => '>',
-						),
-					),
-				),
-			)
-		);
-		return (int) $query->found_posts;
+	public function count_open( $user_id, $email = '' ) {
+		return count( $this->find_open_for_identity( $user_id, $email ) );
 	}
 
-	public function user_has_open_for_product( $product_id, $user_id ) {
-		if ( ! $product_id || ! $user_id ) {
-			return false;
+	public function user_has_open_for_product( $product_id, $user_id, $email = '' ) {
+		return ! empty( $this->find_open_for_identity( $user_id, $email, $product_id ) );
+	}
+
+	/** Return unique, unexpired open reservations for an account/email identity. */
+	private function find_open_for_identity( $user_id, $email = '', $product_id = 0 ) {
+		$user_id = absint( $user_id );
+		$email   = sanitize_email( $email );
+		if ( ! $email && $user_id ) {
+			$user  = get_userdata( $user_id );
+			$email = $user ? sanitize_email( $user->user_email ) : '';
 		}
-		$ids = get_posts(
+		if ( ! $user_id && $email ) {
+			$user    = get_user_by( 'email', $email );
+			$user_id = $user ? (int) $user->ID : 0;
+		}
+		if ( ! $user_id && ! $email ) {
+			return array();
+		}
+
+		$base_meta = array(
 			array(
-				'post_type'      => 'htp_reservation',
-				'post_status'    => 'publish',
-				'fields'         => 'ids',
-				'posts_per_page' => 10,
-				'author'         => absint( $user_id ),
-				'meta_query'     => array(
-					array(
-						'key'   => HTP_Reservation_Meta::PRODUCT_ID,
-						'value' => absint( $product_id ),
-					),
-					array(
-						'key'     => HTP_Reservation_Meta::STATUS,
-						'value'   => HTP_Reservation_Status::open(),
-						'compare' => 'IN',
-					),
-				),
-			)
+				'key'     => HTP_Reservation_Meta::STATUS,
+				'value'   => HTP_Reservation_Status::open(),
+				'compare' => 'IN',
+			),
+			array(
+				'key'     => HTP_Reservation_Meta::EXPIRES_AT,
+				'value'   => time(),
+				'type'    => 'NUMERIC',
+				'compare' => '>',
+			),
 		);
-		$now = time();
-		foreach ( $ids as $reservation_id ) {
-			if ( (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT ) > $now ) {
-				return true;
-			}
+		if ( $product_id ) {
+			$base_meta[] = array(
+				'key'   => HTP_Reservation_Meta::PRODUCT_ID,
+				'value' => absint( $product_id ),
+				'type'  => 'NUMERIC',
+			);
 		}
-		return false;
+		$args = array(
+			'post_type'      => 'htp_reservation',
+			'post_status'    => 'publish',
+			'fields'         => 'ids',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+			'meta_query'     => $base_meta,
+		);
+		$ids  = array();
+		if ( $user_id ) {
+			$args['author'] = $user_id;
+			$ids            = get_posts( $args );
+			unset( $args['author'] );
+		}
+		if ( $email ) {
+			$args['meta_query'][] = array(
+				'key'   => HTP_Reservation_Meta::EMAIL,
+				'value' => $email,
+			);
+			$ids                  = array_merge( $ids, get_posts( $args ) );
+		}
+		return array_values( array_unique( array_map( 'absint', $ids ) ) );
 	}
 
 	/** Return cached counts for every known reservation status and the total. */

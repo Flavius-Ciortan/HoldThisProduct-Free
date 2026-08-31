@@ -26,8 +26,8 @@ $pid         = $product->get_id();
 $options     = get_option( 'holdthisproduct_options' );
 $globally_on = ! empty( $options['enable_reservation'] );
 
-// Only show button if reservations are globally enabled AND user is logged in
-$show_button = $globally_on && is_user_logged_in();
+// Free remains account-only; compatible add-ons may enable a verified guest flow.
+$show_button = $globally_on && ( is_user_logged_in() || apply_filters( 'htp_guest_reservation_form_visible', false, $product ) );
 ?>
 
 <?php if ( $show_button ) : ?>

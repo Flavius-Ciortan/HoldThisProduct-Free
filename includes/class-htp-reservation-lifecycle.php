@@ -31,15 +31,39 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 
 	/** Validate and create a customer reservation inside product and user locks. */
 	public function request( $product_id, $user_id, $requested_quantity = 1 ) {
+		$user_id = absint( $user_id );
+		$user    = $user_id ? get_userdata( $user_id ) : false;
+		if ( ! $user ) {
+			return new WP_Error( 'htp_invalid_identity', __( 'A valid customer account is required.', 'hold-this-product' ) );
+		}
+		return $this->request_for_identity( $product_id, $user_id, $user->user_email, $requested_quantity );
+	}
+
+	/** Accept a guest only after an extension has independently verified the email identity. */
+	public function request_guest( $product_id, $guest_email, $requested_quantity = 1 ) {
+		$guest_email = sanitize_email( $guest_email );
+		if ( ! $guest_email || ! is_email( $guest_email ) ) {
+			return new WP_Error( 'htp_invalid_identity', __( 'A valid verified email address is required.', 'hold-this-product' ) );
+		}
+		$user = get_user_by( 'email', $guest_email );
+		if ( $user ) {
+			return $this->request( $product_id, $user->ID, $requested_quantity );
+		}
+		return $this->request_for_identity( $product_id, 0, $guest_email, $requested_quantity );
+	}
+
+	private function request_for_identity( $product_id, $user_id, $guest_email, $requested_quantity ) {
 		$product_id         = absint( $product_id );
 		$user_id            = absint( $user_id );
+		$guest_email        = sanitize_email( $guest_email );
 		$requested_quantity = absint( $requested_quantity );
 		$product            = wc_get_product( $product_id );
-		if ( ! $product || ! $this->rules->is_product_reservable( $product_id, $user_id ) ) {
+		if ( ! $product || ! $this->rules->is_product_reservable( $product_id, $user_id, $user_id ? '' : $guest_email ) ) {
 			return new WP_Error( 'htp_not_reservable', __( 'Reservations are not available for this product.', 'hold-this-product' ) );
 		}
 
-		$locks = $this->locks->acquire( array( 'product_' . $product_id, 'user_' . $user_id ) );
+		$identity_lock = $user_id ? 'user_' . $user_id : 'email_' . hash( 'sha256', strtolower( $guest_email ) );
+		$locks         = $this->locks->acquire( array( 'product_' . $product_id, $identity_lock ) );
 		if ( is_wp_error( $locks ) ) {
 			return $locks;
 		}
@@ -58,18 +82,18 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 			$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
 			$quantity          = $this->rules->get_quantity( $requested_quantity, $product_id, $user_id );
 			$limit             = $this->rules->get_max_reservations_per_user( $user_id, $product_id );
-			if ( $this->repository->count_open( $user_id ) >= $limit ) {
+			if ( $this->repository->count_open( $user_id, $guest_email ) >= $limit ) {
 				/* translators: %d: maximum number of open reservations allowed. */
 				return new WP_Error( 'htp_limit', sprintf( __( 'You have reached the maximum of %d open reservations.', 'hold-this-product' ), $limit ) );
 			}
-			if ( $this->repository->user_has_open_for_product( $product_id, $user_id ) ) {
+			if ( $this->repository->user_has_open_for_product( $product_id, $user_id, $guest_email ) ) {
 				return new WP_Error( 'htp_duplicate', __( 'You already have a pending or active reservation for this product.', 'hold-this-product' ) );
 			}
 			if ( (int) $product->get_stock_quantity( 'edit' ) < $quantity ) {
 				return new WP_Error( 'htp_no_stock', __( 'There is not enough stock available for this reservation.', 'hold-this-product' ) );
 			}
 
-			$reservation_id = $this->create( $product_id, $user_id, '', $quantity );
+			$reservation_id = $this->create( $product_id, $user_id, $guest_email, $quantity );
 			if ( ! $reservation_id ) {
 				return new WP_Error( 'htp_create_failed', __( 'Could not create reservation.', 'hold-this-product' ) );
 			}
@@ -84,9 +108,9 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 	}
 
 	public function create( $product_id, $user_id = 0, $guest_email = '', $quantity = 1 ) {
-		unset( $guest_email );
 		$product_id        = absint( $product_id );
 		$user_id           = absint( $user_id );
+		$guest_email       = sanitize_email( $guest_email );
 		$quantity          = max( 1, min( 10000, absint( $quantity ) ) );
 		$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
 		$duration_hours    = $this->rules->get_duration_hours( $requires_approval ? 'pending' : 'active', $product_id, $user_id );
@@ -121,6 +145,9 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 				$notification_email                       = $user->user_email;
 				$meta_data[ HTP_Reservation_Meta::EMAIL ] = $notification_email;
 			}
+		} elseif ( $guest_email && is_email( $guest_email ) ) {
+			$notification_email                       = $guest_email;
+			$meta_data[ HTP_Reservation_Meta::EMAIL ] = $guest_email;
 		}
 
 		foreach ( $meta_data as $key => $value ) {

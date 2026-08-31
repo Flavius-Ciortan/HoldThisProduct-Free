@@ -14,13 +14,15 @@ final class HTP_Reservation_Rules {
 		return (bool) apply_filters( 'htp_product_supports_reservation_inventory', $supported, $product );
 	}
 
-	public function is_product_reservable( $product_id, $user_id = 0 ) {
+	public function is_product_reservable( $product_id, $user_id = 0, $guest_email = '' ) {
 		if ( ! $this->are_reservations_globally_enabled() ) {
 			return false;
 		}
 
-		$user_id = absint( $user_id ? $user_id : get_current_user_id() );
-		if ( ! $user_id ) {
+		$guest_email = sanitize_email( $guest_email );
+		$user_id     = absint( $guest_email ? $user_id : ( $user_id ? $user_id : get_current_user_id() ) );
+		$guest       = ! $user_id && $guest_email && is_email( $guest_email );
+		if ( ! $user_id && ( ! $guest || ! apply_filters( 'htp_allow_guest_reservations', false, $product_id, $guest_email ) ) ) {
 			return false;
 		}
 
@@ -31,7 +33,7 @@ final class HTP_Reservation_Rules {
 			&& 'publish' === get_post_status( $product_id )
 			&& (int) $product->get_stock_quantity( 'edit' ) > 0;
 
-		return (bool) apply_filters( 'htp_product_is_reservable', $reservable, $product, $user_id );
+		return (bool) apply_filters( 'htp_product_is_reservable', $reservable, $product, $user_id, $guest_email );
 	}
 
 	public function get_quantity( $requested_quantity, $product_id, $user_id ) {

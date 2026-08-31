@@ -104,6 +104,7 @@ class HTP_Frontend {
 				'ajax_url'     => admin_url( 'admin-ajax.php' ),
 				'nonce'        => wp_create_nonce( 'holdthisproduct_nonce' ),
 				'is_logged_in' => is_user_logged_in() ? 1 : 0,
+				'allow_guest'  => apply_filters( 'htp_guest_reservation_frontend_enabled', false ) ? 1 : 0,
 				'i18n'         => array(
 					'loginRequired'   => __( 'Please log in to reserve products.', 'hold-this-product' ),
 					'selectVariation' => __( 'Please choose a product variation before reserving.', 'hold-this-product' ),

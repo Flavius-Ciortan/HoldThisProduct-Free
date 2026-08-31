@@ -51,7 +51,7 @@ jQuery(document).ready(function($) {
 		}
         modalOpener = this;
 
-        if (holdthisproduct_ajax.is_logged_in == 0) {
+		if (holdthisproduct_ajax.is_logged_in == 0 && holdthisproduct_ajax.allow_guest == 0) {
 			alert(holdthisproduct_ajax.i18n.loginRequired);
             return;
         }
@@ -95,12 +95,14 @@ jQuery(document).ready(function($) {
         var formData = new FormData(this);
         clearNotice();
         
-        var ajaxData = {
-            action: 'holdthisproduct_reserve',
-            product_id: formData.get('product_id'),
-			quantity: formData.get('quantity') || 1,
-            security: holdthisproduct_ajax.nonce
-        };
+        var ajaxData = {};
+		formData.forEach(function(value, key) {
+			ajaxData[key] = value;
+		});
+		ajaxData.action = ajaxData.action || 'holdthisproduct_reserve';
+		ajaxData.product_id = formData.get('product_id');
+		ajaxData.quantity = formData.get('quantity') || 1;
+		ajaxData.security = holdthisproduct_ajax.nonce;
 
         var $submitBtn = $form.find('button[type="submit"]');
         var originalText = $submitBtn.text();

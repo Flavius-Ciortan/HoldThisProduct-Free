@@ -438,15 +438,15 @@ class HTP_Reservations {
 	 *
 	 * Pending approvals count towards limits to prevent spamming requests.
 	 */
-	public function count_open_reservations( $user_id = 0 ) {
-		return $this->repository->count_open( $user_id );
+	public function count_open_reservations( $user_id = 0, $email = '' ) {
+		return $this->repository->count_open( $user_id, $email );
 	}
 
 	/**
 	 * Check if a user already has an open reservation request for a product (active + pending approval).
 	 */
-	public function user_has_open_reservation_for_product( $product_id, $user_id = 0 ) {
-		return $this->repository->user_has_open_for_product( $product_id, $user_id );
+	public function user_has_open_reservation_for_product( $product_id, $user_id = 0, $email = '' ) {
+		return $this->repository->user_has_open_for_product( $product_id, $user_id, $email );
 	}
 
 	public function register_privacy_exporter( $exporters ) {

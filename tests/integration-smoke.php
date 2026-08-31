@@ -242,6 +242,43 @@ $htp_variation_order->update_status( 'cancelled' );
 htp_assert( 4 === (int) wc_get_product( $htp_variation_id )->get_stock_quantity( 'edit' ), 'Variation order cancellation restores its stock once.' );
 remove_filter( 'htp_product_supports_reservation_inventory', $htp_variation_inventory_filter, 10 );
 remove_filter( 'htp_reservation_quantity', $htp_quantity_filter, 10 );
+
+$htp_guest_product = new WC_Product_Simple();
+$htp_guest_product->set_name( 'Verified guest reservation product' );
+$htp_guest_product->set_status( 'publish' );
+$htp_guest_product->set_regular_price( '10' );
+$htp_guest_product->set_manage_stock( true );
+$htp_guest_product->set_stock_quantity( 2 );
+$htp_guest_product_id = $htp_guest_product->save();
+$htp_guest_key        = strtolower( wp_generate_password( 8, false ) );
+$htp_guest_email      = 'htp-verified-guest-' . $htp_guest_key . '@example.test';
+$htp_guest_disabled   = $htp_plugin->get_service( 'lifecycle' )->request_guest( $htp_guest_product_id, $htp_guest_email );
+htp_assert( is_wp_error( $htp_guest_disabled ) && 'htp_not_reservable' === $htp_guest_disabled->get_error_code(), 'Free guest lifecycle remains disabled without an explicit extension opt-in.' );
+$htp_guest_opt_in = static function () {
+	return true;
+};
+add_filter( 'htp_allow_guest_reservations', $htp_guest_opt_in );
+$htp_guest_result         = $htp_plugin->get_service( 'lifecycle' )->request_guest( $htp_guest_product_id, $htp_guest_email );
+$htp_guest_reservation_id = is_wp_error( $htp_guest_result ) ? 0 : $htp_guest_result['reservation_id'];
+htp_assert( $htp_guest_reservation_id && 0 === (int) get_post_field( 'post_author', $htp_guest_reservation_id ), 'Verified guest reservation uses the canonical authorless Free record.' );
+htp_assert( $htp_guest_email === HTP_Reservation_Meta::get( $htp_guest_reservation_id, HTP_Reservation_Meta::EMAIL ), 'Verified guest identity is stored on the canonical reservation.' );
+htp_assert( 1 === $htp_plugin->reservations->count_open_reservations( 0, $htp_guest_email ), 'Guest email identity consumes the normal open-reservation quota.' );
+htp_assert( 1 === (int) wc_get_product( $htp_guest_product_id )->get_stock_quantity( 'edit' ), 'Verified guest reservation holds stock through the Free inventory transaction.' );
+$htp_guest_duplicate = $htp_plugin->get_service( 'lifecycle' )->request_guest( $htp_guest_product_id, $htp_guest_email );
+htp_assert( is_wp_error( $htp_guest_duplicate ) && 'htp_duplicate' === $htp_guest_duplicate->get_error_code(), 'Repeated verified guest identity cannot create a duplicate hold.' );
+$htp_guest_user_id = wp_insert_user(
+	array(
+		'user_login' => 'htp-verified-guest-' . $htp_guest_key,
+		'user_pass'  => wp_generate_password( 24 ),
+		'user_email' => $htp_guest_email,
+		'role'       => 'customer',
+	)
+);
+$htp_account_duplicate = $htp_plugin->get_service( 'lifecycle' )->request( $htp_guest_product_id, $htp_guest_user_id );
+htp_assert( is_wp_error( $htp_account_duplicate ) && 'htp_duplicate' === $htp_account_duplicate->get_error_code(), 'Creating an account with a guest email cannot bypass duplicate protection.' );
+htp_assert( true === $htp_plugin->reservations->cancel_reservation( $htp_guest_reservation_id ), 'Verified guest reservation cancels through the Free lifecycle.' );
+htp_assert( 2 === (int) wc_get_product( $htp_guest_product_id )->get_stock_quantity( 'edit' ), 'Guest cancellation restores stock exactly once.' );
+remove_filter( 'htp_allow_guest_reservations', $htp_guest_opt_in );
 update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 1, 'enable_email_notifications' => 0 ) );
 
 function htp_test_reservation( $product_id, $user_id, $status, $expires ) {
@@ -352,8 +389,11 @@ wp_delete_post( $htp_variation_reservation_id, true );
 wp_delete_post( $htp_variation_id, true );
 wp_delete_post( $htp_variable_id, true );
 wp_delete_post( $htp_quantity_product_id, true );
+wp_delete_post( $htp_guest_reservation_id, true );
+wp_delete_post( $htp_guest_product_id, true );
 $htp_order->delete( true );
 wp_delete_user( $htp_privacy_user_id );
+wp_delete_user( $htp_guest_user_id );
 wp_delete_user( $htp_user_id );
 remove_action( 'htp_reservation_transitioned', $htp_transition_listener );
 remove_action( 'htp_reservation_extended', $htp_extension_listener );
