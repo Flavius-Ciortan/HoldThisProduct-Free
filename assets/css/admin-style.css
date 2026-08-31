@@ -1165,3 +1165,13 @@ td:nth-child(5) {
 .htp-input-right-align input {
     margin-right: 1.25rem;
 }
+
+@media (prefers-reduced-motion: reduce) {
+    [class*="htp-"],
+    [id^="htp-"] {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

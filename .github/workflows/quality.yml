@@ -76,6 +76,9 @@ jobs:
         run: wp eval "define('HTP_INTEGRATION_TEST', true); require WP_PLUGIN_DIR . '/hold-this-product/tests/integration-smoke.php';" --path=/tmp/wordpress
       - name: Run concurrent last-unit stress test
         run: bash tests/concurrency-stress.sh /tmp/wordpress
+      - name: Run HPOS compatibility matrix
+        if: matrix.woocommerce == 'latest'
+        run: bash tests/hpos-matrix.sh /tmp/wordpress
 
   release-artifact:
     needs: [static-analysis, integration]
@@ -135,5 +138,7 @@ jobs:
         env:
           HTP_ALLOW_DESTRUCTIVE_RELEASE_TEST: '1'
         run: bash tests/release-lifecycle.sh /tmp/wordpress
+      - name: Verify artifact HPOS matrix
+        run: bash tests/hpos-matrix.sh /tmp/wordpress
       - name: Run artifact concurrency test
         run: bash tests/concurrency-stress.sh /tmp/wordpress

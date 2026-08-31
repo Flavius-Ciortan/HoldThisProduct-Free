@@ -236,6 +236,7 @@ foreach ( $htp_privacy_ids as $htp_privacy_id ) {
 wp_delete_post( $htp_delete_reservation_id, true );
 wp_delete_post( $htp_product_id, true );
 wp_delete_post( $htp_immediate_product_id, true );
+$htp_order->delete( true );
 wp_delete_user( $htp_privacy_user_id );
 wp_delete_user( $htp_user_id );
 remove_action( 'htp_reservation_transitioned', $htp_transition_listener );
