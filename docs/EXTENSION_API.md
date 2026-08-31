@@ -83,10 +83,10 @@ Renders add-on fields inside the reservation form. A numeric field named `quanti
 ### `htp_customer_reservation_limit`
 
 ```php
-apply_filters( 'htp_customer_reservation_limit', int $limit, int $user_id );
+apply_filters( 'htp_customer_reservation_limit', int $limit, int $user_id, int $product_id );
 ```
 
-Changes the concurrent open-reservation limit for a customer. Return an integer of at least one.
+Changes the concurrent open-reservation limit for a customer in the context of the requested product. `$product_id` is zero when no product context is available. Return an integer of at least one.
 
 ### `htp_reservation_requires_approval`
 

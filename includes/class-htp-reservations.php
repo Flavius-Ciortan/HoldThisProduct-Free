@@ -190,8 +190,8 @@ class HTP_Reservations {
 	/**
 	 * Get max reservations per user
 	 */
-	public function get_max_reservations_per_user() {
-			return $this->rules->get_max_reservations_per_user( get_current_user_id() );
+	public function get_max_reservations_per_user( $product_id = 0 ) {
+		return $this->rules->get_max_reservations_per_user( get_current_user_id(), $product_id );
 	}
 
 	public function requires_approval( $product_id, $user_id ) {

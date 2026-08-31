@@ -57,7 +57,7 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 
 			$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
 			$quantity          = $this->rules->get_quantity( $requested_quantity, $product_id, $user_id );
-			$limit             = $this->rules->get_max_reservations_per_user( $user_id );
+			$limit             = $this->rules->get_max_reservations_per_user( $user_id, $product_id );
 			if ( $this->repository->count_open( $user_id ) >= $limit ) {
 				/* translators: %d: maximum number of open reservations allowed. */
 				return new WP_Error( 'htp_limit', sprintf( __( 'You have reached the maximum of %d open reservations.', 'hold-this-product' ), $limit ) );

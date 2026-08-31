@@ -50,10 +50,10 @@ final class HTP_Reservation_Rules {
 		return ! empty( $options['enable_reservation'] );
 	}
 
-	public function get_max_reservations_per_user( $user_id = 0 ) {
+	public function get_max_reservations_per_user( $user_id = 0, $product_id = 0 ) {
 		$options = $this->get_options();
 		$limit   = max( 1, min( 100, absint( $options['max_reservations'] ) ) );
-		return max( 1, absint( apply_filters( 'htp_customer_reservation_limit', $limit, absint( $user_id ? $user_id : get_current_user_id() ) ) ) );
+		return max( 1, absint( apply_filters( 'htp_customer_reservation_limit', $limit, absint( $user_id ? $user_id : get_current_user_id() ), absint( $product_id ) ) ) );
 	}
 
 	public function requires_approval( $product_id, $user_id ) {
