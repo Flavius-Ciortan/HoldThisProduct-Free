@@ -337,6 +337,7 @@ $htp_active_id = htp_test_reservation( $htp_product_id, $htp_user_id, 'active', 
 wc_update_product_stock( wc_get_product( $htp_product_id ), 1, 'decrease' );
 $htp_plugin->reservations->sync_cart_reservations( $htp_cart );
 htp_assert( $htp_active_id === (int) $htp_cart->cart_contents[ $htp_cart_item_key ]['_htp_reservation_id'], 'Existing cart item is linked after the reservation is created.' );
+htp_assert( wc_get_product( $htp_product_id )->is_in_stock(), 'The reservation owner passes WooCommerce stock availability for the held last unit.' );
 $htp_order = wc_create_order( array( 'customer_id' => $htp_user_id ) );
 $htp_item_id = $htp_order->add_product( wc_get_product( $htp_product_id ), 1 );
 $htp_item = $htp_order->get_item( $htp_item_id );

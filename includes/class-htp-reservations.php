@@ -58,6 +58,7 @@ class HTP_Reservations {
 
 		add_filter( 'woocommerce_product_get_stock_quantity', array( $this, 'include_owned_hold_in_stock' ), 20, 2 );
 		add_filter( 'woocommerce_product_get_stock_status', array( $this, 'include_owned_hold_in_stock_status' ), 20, 2 );
+		add_filter( 'woocommerce_product_is_in_stock', array( $this, 'include_owned_hold_in_availability' ), 20, 2 );
 		add_filter( 'woocommerce_add_cart_item_data', array( $this, 'attach_reservation_to_cart_item' ), 10, 4 );
 		add_action( 'woocommerce_cart_loaded_from_session', array( $this, 'sync_cart_reservations' ) );
 		add_action( 'woocommerce_before_calculate_totals', array( $this, 'sync_cart_reservations' ), 5 );
@@ -368,6 +369,10 @@ class HTP_Reservations {
 
 	public function include_owned_hold_in_stock_status( $status, $product ) {
 		return $this->cart_order->include_owned_hold_in_stock_status( $status, $product );
+	}
+
+	public function include_owned_hold_in_availability( $in_stock, $product ) {
+		return $this->cart_order->include_owned_hold_in_availability( $in_stock, $product );
 	}
 
 	public function attach_reservation_to_cart_item( $cart_item_data, $product_id, $variation_id, $quantity ) {

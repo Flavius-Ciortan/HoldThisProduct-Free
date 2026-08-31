@@ -33,6 +33,13 @@ final class HTP_Cart_Order_Service {
 		return $status;
 	}
 
+	public function include_owned_hold_in_availability( $in_stock, $product ) {
+		if ( ! $in_stock && is_user_logged_in() && $product instanceof WC_Product && $this->get_owned_hold_allowance( $product->get_id() ) > 0 ) {
+			return true;
+		}
+		return $in_stock;
+	}
+
 	public function attach_reservation_to_cart_item( $cart_item_data, $product_id, $variation_id, $quantity ) {
 		unset( $quantity );
 		$product_id = absint( $variation_id ? $variation_id : $product_id );
