@@ -13,14 +13,16 @@ class HTP_Reservations {
 	private $inventory;
 	private $notifications;
 	private $privacy;
+	private $repository;
     
     /**
      * Constructor
      */
-	    public function __construct( $inventory = null, $notifications = null, $privacy = null ) {
+	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null ) {
 			$this->inventory = $inventory instanceof HTP_Inventory_Manager ? $inventory : new HTP_Inventory_Manager();
 			$this->notifications = $notifications instanceof HTP_Notification_Dispatcher ? $notifications : new HTP_Notification_Dispatcher();
 			$this->privacy = $privacy instanceof HTP_Privacy_Service ? $privacy : new HTP_Privacy_Service();
+			$this->repository = $repository instanceof HTP_Reservation_Repository ? $repository : new HTP_Reservation_Repository();
 	        $this->init();
     }
     
@@ -387,54 +389,14 @@ class HTP_Reservations {
      * Count active reservations for user
      */
     public function count_active_reservations( $user_id = 0, $email = '' ) {
-        $args = array(
-            'post_type'      => 'htp_reservation',
-            'post_status'    => 'publish',
-            'fields'         => 'ids',
-			'posts_per_page' => 1,
-            'meta_query'     => array(
-                array( 'key' => '_htp_status', 'value' => 'active' ),
-				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' )
-            ),
-        );
-        
-        if ( $user_id > 0 ) {
-            $args['author'] = $user_id;
-        } elseif ( $email !== '' ) {
-            $args['meta_query'][] = array( 'key' => '_htp_email', 'value' => $email );
-        } else {
-            return 0;
-        }
-        
-		$query = new WP_Query( $args );
-		return (int) $query->found_posts;
+		return $this->repository->count_active( $user_id, $email );
     }
     
     /**
      * Check if user has active reservation for specific product
      */
     public function user_has_active_reservation_for_product( $product_id, $user_id = 0, $email = '' ) {
-        $args = array(
-            'post_type'      => 'htp_reservation',
-            'post_status'    => 'publish',
-            'fields'         => 'ids',
-            'posts_per_page' => 1,
-            'meta_query'     => array(
-                array( 'key' => '_htp_status', 'value' => 'active' ),
-                array( 'key' => '_htp_product_id', 'value' => $product_id ),
-				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' )
-            ),
-        );
-        
-        if ( $user_id > 0 ) {
-            $args['author'] = $user_id;
-        } elseif ( $email !== '' ) {
-            $args['meta_query'][] = array( 'key' => '_htp_email', 'value' => $email );
-        } else {
-            return false;
-        }
-        
-        return ! empty( get_posts( $args ) );
+		return $this->repository->has_active( $product_id, $user_id, $email );
     }
     
     /**
@@ -637,16 +599,7 @@ class HTP_Reservations {
 	}
 
 	private function find_active_reservation( $product_id, $user_id ) {
-		$ids = get_posts( array(
-			'post_type' => 'htp_reservation', 'post_status' => 'publish', 'fields' => 'ids', 'posts_per_page' => 1,
-			'author' => absint( $user_id ), 'no_found_rows' => true,
-			'meta_query' => array(
-				array( 'key' => '_htp_product_id', 'value' => absint( $product_id ), 'type' => 'NUMERIC' ),
-				array( 'key' => '_htp_status', 'value' => 'active' ),
-				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' ),
-			),
-		) );
-		return $ids ? (int) $ids[0] : 0;
+		return $this->repository->find_active( $product_id, $user_id );
 	}
 
 	public function attach_reservation_to_cart_item( $cart_item_data, $product_id, $variation_id, $quantity ) {
@@ -934,77 +887,15 @@ class HTP_Reservations {
      *
      * Pending approvals count towards limits to prevent spamming requests.
      */
-	    public function count_open_reservations( $user_id = 0 ) {
-        if ( $user_id <= 0 ) {
-            return 0;
-        }
-
-		$query = new WP_Query( array(
-            'post_type'      => 'htp_reservation',
-            'post_status'    => 'publish',
-            'fields'         => 'ids',
-			'posts_per_page' => 1,
-            'author'         => $user_id,
-            'meta_query'     => array(
-				'relation' => 'OR',
-					array(
-						'relation' => 'AND',
-						array( 'key' => '_htp_status', 'value' => 'pending_approval' ),
-						array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' ),
-					),
-				array(
-					'relation' => 'AND',
-					array( 'key' => '_htp_status', 'value' => 'active' ),
-					array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' ),
-				),
-            ),
-		) );
-		return (int) $query->found_posts;
+	public function count_open_reservations( $user_id = 0 ) {
+		return $this->repository->count_open( $user_id );
     }
 
     /**
      * Check if a user already has an open reservation request for a product (active + pending approval).
      */
-    public function user_has_open_reservation_for_product( $product_id, $user_id = 0 ) {
-        $product_id = absint( $product_id );
-        $user_id = absint( $user_id );
-        if ( ! $product_id || ! $user_id ) {
-            return false;
-        }
-
-        $ids = get_posts( array(
-            'post_type'      => 'htp_reservation',
-            'post_status'    => 'publish',
-            'fields'         => 'ids',
-            'posts_per_page' => 10,
-            'author'         => $user_id,
-            'meta_query'     => array(
-                array( 'key' => '_htp_product_id', 'value' => $product_id ),
-                array( 'key' => '_htp_status', 'value' => array( 'active', 'pending_approval' ), 'compare' => 'IN' ),
-            ),
-        ) );
-
-        if ( empty( $ids ) ) {
-            return false;
-        }
-
-		$now = time();
-        foreach ( $ids as $reservation_id ) {
-            $status = get_post_meta( $reservation_id, '_htp_status', true );
-            if ( $status === 'pending_approval' ) {
-				if ( (int) get_post_meta( $reservation_id, '_htp_expires_at', true ) > $now ) {
-					return true;
-				}
-				continue;
-            }
-
-            $expires = (int) get_post_meta( $reservation_id, '_htp_expires_at', true );
-            if ( $expires > $now ) {
-                return true;
-            }
-        }
-
-        return false;
+	public function user_has_open_reservation_for_product( $product_id, $user_id = 0 ) {
+		return $this->repository->user_has_open_for_product( $product_id, $user_id );
     }
 
 	public function register_privacy_exporter( $exporters ) {
