@@ -44,6 +44,16 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 		}
 
 		try {
+			/**
+			 * Fires after the product and customer request locks are acquired.
+			 *
+			 * Observers must not mutate reservation or inventory state here.
+			 *
+			 * @param int $product_id Product ID.
+			 * @param int $user_id Customer user ID.
+			 */
+			do_action( 'htp_reservation_request_locked', $product_id, $user_id );
+
 			$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
 			$limit             = $this->rules->get_max_reservations_per_user( $user_id );
 			if ( $this->repository->count_open( $user_id ) >= $limit ) {

@@ -11,13 +11,13 @@ jobs:
   static-analysis:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           tools: composer:v2
           coverage: none
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - run: composer install --no-interaction --prefer-dist
@@ -51,7 +51,7 @@ jobs:
           --health-timeout=5s
           --health-retries=10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -74,12 +74,14 @@ jobs:
           wp plugin activate hold-this-product --path=/tmp/wordpress
       - name: Run integration assertions
         run: wp eval "define('HTP_INTEGRATION_TEST', true); require WP_PLUGIN_DIR . '/hold-this-product/tests/integration-smoke.php';" --path=/tmp/wordpress
+      - name: Run concurrent last-unit stress test
+        run: bash tests/concurrency-stress.sh /tmp/wordpress
 
   release-artifact:
     needs: [static-analysis, integration]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - run: bash bin/build-release.sh
@@ -111,6 +113,7 @@ jobs:
           --health-timeout=5s
           --health-retries=10
     steps:
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -128,3 +131,9 @@ jobs:
           wp plugin install plugin-check --path=/tmp/wordpress --activate
           wp plugin install dist/*.zip --path=/tmp/wordpress --activate
           wp plugin check hold-this-product --path=/tmp/wordpress --format=table
+      - name: Verify release lifecycle
+        env:
+          HTP_ALLOW_DESTRUCTIVE_RELEASE_TEST: '1'
+        run: bash tests/release-lifecycle.sh /tmp/wordpress
+      - name: Run artifact concurrency test
+        run: bash tests/concurrency-stress.sh /tmp/wordpress
