@@ -43,6 +43,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php foreach ( $reservations as $reservation ) : ?>
 			<?php
 			$product_id = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::PRODUCT_ID );
+			$quantity   = max( 1, (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::QUANTITY ) );
 			$status     = (string) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::STATUS );
 			$expires_ts = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EXPIRES_AT );
 			$product    = wc_get_product( $product_id );
@@ -117,7 +118,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				$urgency_class = 'expired';
 			}
 
-			$add_to_cart_url = esc_url( wc_get_cart_url() . '?add-to-cart=' . $product_id );
+			$add_to_cart_url = add_query_arg( 'quantity', $quantity, $product->add_to_cart_url() );
 			$cancel_nonce    = wp_create_nonce( 'htp_cancel_res_' . $reservation->ID );
 
 			$status_label = HTP_Reservation_Status::label( $status );
@@ -157,6 +158,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<a href="<?php echo esc_url( get_permalink( $product_id ) ); ?>" class="woocommerce-LoopProduct-link">
 						<?php echo esc_html( $product->get_name() ); ?>
 					</a>
+					<span class="htp-reservation-quantity"><?php echo esc_html( sprintf( '×%d', $quantity ) ); ?></span>
 				</td>
 				<td class="woocommerce-orders-table__cell woocommerce-orders-table__cell-order-status" data-title="<?php esc_attr_e( 'Status', 'hold-this-product' ); ?>">
 					<span class="htp-status-badge htp-status-badge--<?php echo esc_attr( $badge_variant ); ?>">

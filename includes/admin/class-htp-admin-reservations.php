@@ -454,6 +454,7 @@ class HTP_Admin_Reservations {
 		$surname    = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::SURNAME );
 		$expires_ts = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EXPIRES_AT );
 		$status     = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::STATUS );
+		$quantity   = max( 1, (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::QUANTITY ) );
 
 		$product          = wc_get_product( $product_id );
 		$product_name     = $product ? $product->get_name() : 'Unknown Product (ID: ' . $product_id . ')';
@@ -515,6 +516,7 @@ class HTP_Admin_Reservations {
 		} else {
 			echo esc_html( $product_name );
 		}
+		echo ' <span aria-label="' . esc_attr( sprintf( /* translators: %d: reserved product quantity. */ __( 'Quantity %d', 'hold-this-product' ), $quantity ) ) . '">' . esc_html( sprintf( '×%d', $quantity ) ) . '</span>';
 		echo '</td>';
 		echo '<td title="' . esc_attr( $customer ) . '">' . esc_html( $customer ) . '</td>';
 		echo '<td><span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_display ) . '</span></td>';

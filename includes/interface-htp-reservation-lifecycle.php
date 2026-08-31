@@ -6,9 +6,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Stable reservation transition contract for compatible add-ons. */
 interface HTP_Reservation_Lifecycle_Interface {
-	public function request( $product_id, $user_id );
+	public function request( $product_id, $user_id, $requested_quantity = 1 );
 
-	public function create( $product_id, $user_id = 0, $guest_email = '' );
+	public function create( $product_id, $user_id = 0, $guest_email = '', $quantity = 1 );
 
 	public function approve( $reservation_id );
 

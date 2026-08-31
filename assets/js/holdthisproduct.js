@@ -42,6 +42,13 @@ jQuery(document).ready(function($) {
     $('#htp_reserve_product').on('click', function(e) {
         e.preventDefault();
         var productId = $(this).data('productid');
+		if ($(this).data('product-type') === 'variable') {
+			productId = parseInt($(this).closest('form.variations_form').find('input.variation_id').val(), 10) || 0;
+			if (!productId) {
+				window.alert(holdthisproduct_ajax.i18n.selectVariation);
+				return;
+			}
+		}
         modalOpener = this;
 
         if (holdthisproduct_ajax.is_logged_in == 0) {
@@ -91,6 +98,7 @@ jQuery(document).ready(function($) {
         var ajaxData = {
             action: 'holdthisproduct_reserve',
             product_id: formData.get('product_id'),
+			quantity: formData.get('quantity') || 1,
             security: holdthisproduct_ajax.nonce
         };
 

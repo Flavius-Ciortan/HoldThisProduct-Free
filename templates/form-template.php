@@ -36,6 +36,7 @@ $show_button = $globally_on && is_user_logged_in();
 		id="htp_reserve_product"
 		class="single_add_to_cart_button button alt wp-element-button"
 		data-productid="<?php echo esc_attr( $pid ); ?>"
+		data-product-type="<?php echo esc_attr( $product->get_type() ); ?>"
 	>
 		<?php esc_html_e( 'Reserve Product', 'hold-this-product' ); ?>
 	</button>

@@ -152,12 +152,13 @@ class HTP_Reservations {
 		}
 
 		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
+		$quantity   = isset( $_POST['quantity'] ) ? absint( wp_unslash( $_POST['quantity'] ) ) : 1;
 		if ( ! $product_id ) {
 			wp_send_json_error( __( 'Invalid product ID.', 'hold-this-product' ), 400 );
 		}
 
 		$user_id = get_current_user_id();
-		$result  = $this->lifecycle->request( $product_id, $user_id );
+		$result  = $this->lifecycle->request( $product_id, $user_id, $quantity );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message(), 400 );
@@ -168,8 +169,8 @@ class HTP_Reservations {
 	/**
 	 * Create a new reservation
 	 */
-	public function create_reservation( $product_id, $user_id = 0, $guest_email = '' ) {
-		return $this->lifecycle->create( $product_id, $user_id, $guest_email );
+	public function create_reservation( $product_id, $user_id = 0, $guest_email = '', $quantity = 1 ) {
+		return $this->lifecycle->create( $product_id, $user_id, $guest_email, $quantity );
 	}
 
 	/**

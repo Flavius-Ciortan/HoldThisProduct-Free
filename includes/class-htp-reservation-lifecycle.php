@@ -30,10 +30,11 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 	}
 
 	/** Validate and create a customer reservation inside product and user locks. */
-	public function request( $product_id, $user_id ) {
-		$product_id = absint( $product_id );
-		$user_id    = absint( $user_id );
-		$product    = wc_get_product( $product_id );
+	public function request( $product_id, $user_id, $requested_quantity = 1 ) {
+		$product_id         = absint( $product_id );
+		$user_id            = absint( $user_id );
+		$requested_quantity = absint( $requested_quantity );
+		$product            = wc_get_product( $product_id );
 		if ( ! $product || ! $this->rules->is_product_reservable( $product_id, $user_id ) ) {
 			return new WP_Error( 'htp_not_reservable', __( 'Reservations are not available for this product.', 'hold-this-product' ) );
 		}
@@ -55,6 +56,7 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 			do_action( 'htp_reservation_request_locked', $product_id, $user_id );
 
 			$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
+			$quantity          = $this->rules->get_quantity( $requested_quantity, $product_id, $user_id );
 			$limit             = $this->rules->get_max_reservations_per_user( $user_id );
 			if ( $this->repository->count_open( $user_id ) >= $limit ) {
 				/* translators: %d: maximum number of open reservations allowed. */
@@ -63,27 +65,29 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 			if ( $this->repository->user_has_open_for_product( $product_id, $user_id ) ) {
 				return new WP_Error( 'htp_duplicate', __( 'You already have a pending or active reservation for this product.', 'hold-this-product' ) );
 			}
-			if ( (int) $product->get_stock_quantity( 'edit' ) < 1 ) {
-				return new WP_Error( 'htp_no_stock', __( 'No stock available.', 'hold-this-product' ) );
+			if ( (int) $product->get_stock_quantity( 'edit' ) < $quantity ) {
+				return new WP_Error( 'htp_no_stock', __( 'There is not enough stock available for this reservation.', 'hold-this-product' ) );
 			}
 
-			$reservation_id = $this->create( $product_id, $user_id );
+			$reservation_id = $this->create( $product_id, $user_id, '', $quantity );
 			if ( ! $reservation_id ) {
 				return new WP_Error( 'htp_create_failed', __( 'Could not create reservation.', 'hold-this-product' ) );
 			}
 			return array(
 				'reservation_id'    => $reservation_id,
 				'requires_approval' => $requires_approval,
+				'quantity'          => $quantity,
 			);
 		} finally {
 			$this->locks->release( $locks );
 		}
 	}
 
-	public function create( $product_id, $user_id = 0, $guest_email = '' ) {
+	public function create( $product_id, $user_id = 0, $guest_email = '', $quantity = 1 ) {
 		unset( $guest_email );
 		$product_id        = absint( $product_id );
 		$user_id           = absint( $user_id );
+		$quantity          = max( 1, min( 10000, absint( $quantity ) ) );
 		$requires_approval = $this->rules->requires_approval( $product_id, $user_id );
 		$duration_hours    = $this->rules->get_duration_hours( $requires_approval ? 'pending' : 'active', $product_id, $user_id );
 		$expires_at        = time() + ( $duration_hours * HOUR_IN_SECONDS );
@@ -106,7 +110,7 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 			HTP_Reservation_Meta::PRODUCT_ID      => $product_id,
 			HTP_Reservation_Meta::STATUS          => $initial_status,
 			HTP_Reservation_Meta::EXPIRES_AT      => $expires_at,
-			HTP_Reservation_Meta::QUANTITY        => 1,
+			HTP_Reservation_Meta::QUANTITY        => $quantity,
 			HTP_Reservation_Meta::TIMESTAMP_MODEL => 'utc',
 			HTP_Reservation_Meta::INVENTORY_STATE => HTP_Inventory_Manager::STATE_NONE,
 		);
@@ -127,7 +131,7 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 		}
 
 		if ( ! $requires_approval ) {
-			$activated = $this->inventory->activate( $reservation_id, HTP_Reservation_Status::INITIALIZING, wc_get_product( $product_id ), 1, array(), 'create' );
+			$activated = $this->inventory->activate( $reservation_id, HTP_Reservation_Status::INITIALIZING, wc_get_product( $product_id ), $quantity, array(), 'create' );
 			if ( is_wp_error( $activated ) ) {
 				wp_delete_post( $reservation_id, true );
 				return false;
@@ -164,19 +168,20 @@ final class HTP_Reservation_Lifecycle implements HTP_Reservation_Lifecycle_Inter
 			if ( ! $product_id ) {
 				return new WP_Error( 'htp_missing_product', __( 'Reservation is missing product data.', 'hold-this-product' ) );
 			}
-			$product = wc_get_product( $product_id );
-			if ( ! $product || ! $product->is_type( 'simple' ) || ! $product->managing_stock() ) {
+			$product  = wc_get_product( $product_id );
+			$quantity = max( 1, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::QUANTITY ) );
+			if ( ! $product || ! $this->rules->supports_inventory( $product ) ) {
 				return new WP_Error( 'htp_stock_unmanaged', __( 'Product stock is not managed.', 'hold-this-product' ) );
 			}
-			if ( (int) $product->get_stock_quantity( 'edit' ) <= 0 ) {
-				return new WP_Error( 'htp_no_stock', __( 'No stock available to approve this reservation.', 'hold-this-product' ) );
+			if ( (int) $product->get_stock_quantity( 'edit' ) < $quantity ) {
+				return new WP_Error( 'htp_no_stock', __( 'There is not enough stock available to approve this reservation.', 'hold-this-product' ) );
 			}
 			$expires_at = time() + ( $this->rules->get_duration_hours( 'active', $product_id, $user_id ) * HOUR_IN_SECONDS );
 			$activation = $this->inventory->activate(
 				$reservation_id,
 				HTP_Reservation_Status::PENDING,
 				$product,
-				(int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::QUANTITY ),
+				$quantity,
 				array( HTP_Reservation_Meta::EXPIRES_AT => $expires_at ),
 				'approve'
 			);

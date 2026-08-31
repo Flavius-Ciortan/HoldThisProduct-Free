@@ -35,14 +35,16 @@ Inventory, locking, expiration, privacy, and cart/order services are exposed for
 `HTP_Reservation_Lifecycle_Interface` exposes:
 
 ```php
-request( $product_id, $user_id );
-create( $product_id, $user_id = 0, $guest_email = '' );
+request( $product_id, $user_id, $requested_quantity = 1 );
+create( $product_id, $user_id = 0, $guest_email = '', $quantity = 1 );
 approve( $reservation_id );
 deny( $reservation_id, $reason = '' );
 cancel( $reservation_id );
 ```
 
 Methods return their documented success value or `WP_Error`. Callers must preserve the returned error and must not update reservation status or WooCommerce stock directly.
+
+Free resolves every request to one unit. Add-ons may use the quantity and inventory-support filters below to enable multi-unit or variation reservations. The resolved quantity is stored in canonical reservation metadata and remains visible when an add-on is disabled.
 
 ## Rule Filters
 
@@ -53,6 +55,30 @@ apply_filters( 'htp_product_is_reservable', bool $reservable, ?WC_Product $produ
 ```
 
 Extends eligibility after Free has checked its global switch, customer identity, product type, published/purchasable state, managed stock, and positive quantity.
+
+### `htp_product_supports_reservation_inventory`
+
+```php
+apply_filters( 'htp_product_supports_reservation_inventory', bool $supported, ?WC_Product $product );
+```
+
+Extends the product types whose managed stock can participate in lifecycle transactions. Free supports simple products. An add-on enabling another type must ensure the returned product owns a concrete WooCommerce stock quantity.
+
+### `htp_reservation_quantity`
+
+```php
+apply_filters( 'htp_reservation_quantity', int $quantity, int $requested_quantity, int $product_id, int $user_id );
+```
+
+Resolves the quantity before stock is checked and the reservation is created. Free returns one. Add-ons may return a bounded positive quantity according to their rules; the lifecycle applies a final safety bound of 1 to 10,000 units.
+
+### `htp_reservation_form_fields`
+
+```php
+do_action( 'htp_reservation_form_fields', WC_Product $displayed_product );
+```
+
+Renders add-on fields inside the reservation form. A numeric field named `quantity` is submitted to the lifecycle automatically. Free submits one when the field is absent.
 
 ### `htp_customer_reservation_limit`
 

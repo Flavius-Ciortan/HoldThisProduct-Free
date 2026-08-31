@@ -6,6 +6,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Resolves Free defaults through stable filters that paid modules can extend. */
 final class HTP_Reservation_Rules {
+	public function supports_inventory( $product ) {
+		$supported = $product instanceof WC_Product
+			&& $product->is_type( 'simple' )
+			&& $product->managing_stock();
+
+		return (bool) apply_filters( 'htp_product_supports_reservation_inventory', $supported, $product );
+	}
+
 	public function is_product_reservable( $product_id, $user_id = 0 ) {
 		if ( ! $this->are_reservations_globally_enabled() ) {
 			return false;
@@ -18,13 +26,23 @@ final class HTP_Reservation_Rules {
 
 		$product    = wc_get_product( absint( $product_id ) );
 		$reservable = $product instanceof WC_Product
-			&& $product->is_type( 'simple' )
-			&& $product->managing_stock()
+			&& $this->supports_inventory( $product )
 			&& $product->is_purchasable()
 			&& 'publish' === get_post_status( $product_id )
 			&& (int) $product->get_stock_quantity( 'edit' ) > 0;
 
 		return (bool) apply_filters( 'htp_product_is_reservable', $reservable, $product, $user_id );
+	}
+
+	public function get_quantity( $requested_quantity, $product_id, $user_id ) {
+		$quantity = apply_filters(
+			'htp_reservation_quantity',
+			1,
+			absint( $requested_quantity ),
+			absint( $product_id ),
+			absint( $user_id )
+		);
+		return max( 1, min( 10000, absint( $quantity ) ) );
 	}
 
 	public function are_reservations_globally_enabled() {
