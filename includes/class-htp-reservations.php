@@ -14,16 +14,18 @@ class HTP_Reservations {
 	private $privacy;
 	private $repository;
 	private $cart_order;
+	private $expiration;
     
     /**
      * Constructor
      */
-	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null ) {
+	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null, $expiration = null ) {
 			$this->inventory = $inventory instanceof HTP_Inventory_Manager ? $inventory : new HTP_Inventory_Manager();
 			$this->notifications = $notifications instanceof HTP_Notification_Dispatcher ? $notifications : new HTP_Notification_Dispatcher();
 			$this->privacy = $privacy instanceof HTP_Privacy_Service ? $privacy : new HTP_Privacy_Service();
 			$this->repository = $repository instanceof HTP_Reservation_Repository ? $repository : new HTP_Reservation_Repository();
 			$this->cart_order = $cart_order instanceof HTP_Cart_Order_Service ? $cart_order : new HTP_Cart_Order_Service( $this->inventory, $this->repository );
+			$this->expiration = $expiration instanceof HTP_Expiration_Service ? $expiration : new HTP_Expiration_Service( $this->inventory, $this->notifications, $this->cart_order );
 	        $this->init();
     }
     
@@ -68,61 +70,23 @@ class HTP_Reservations {
     }
 
 	public function add_cron_schedule( $schedules ) {
-		$schedules['htp_five_minutes'] = array(
-			'interval' => 5 * MINUTE_IN_SECONDS,
-			'display'  => __( 'Every five minutes', 'hold-this-product' ),
-		);
-		return $schedules;
+		return $this->expiration->add_cron_schedule( $schedules );
 	}
 
 	public function schedule_expiration() {
-		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
-			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'htp_five_minutes', self::CRON_HOOK );
-		}
+		$this->expiration->schedule();
 	}
 
 	public function migrate_inventory_states() {
-		if ( '1' === (string) get_option( 'htp_inventory_state_version', '' ) ) {
-			return;
-		}
-		if ( $this->inventory->backfill_missing_states( 500 ) < 500 ) {
-			update_option( 'htp_inventory_state_version', '1', false );
-		}
+		$this->expiration->migrate_inventory_states();
 	}
 
 	public function register_site_health_tests( $tests ) {
-		$tests['direct']['hold_this_product_operations'] = array(
-			'label' => __( 'Hold This Product operations', 'hold-this-product' ),
-			'test'  => array( $this, 'get_site_health_result' ),
-		);
-		return $tests;
+		return $this->expiration->register_site_health_tests( $tests );
 	}
 
 	public function get_site_health_result() {
-		$cron_missing = ! wp_next_scheduled( self::CRON_HOOK );
-		$inconsistent = $this->inventory->find_inconsistent_states( 100 );
-		$result = array(
-			'label'       => __( 'Reservation expiration and inventory ownership are healthy', 'hold-this-product' ),
-			'status'      => 'good',
-			'badge'       => array( 'label' => __( 'Hold This Product', 'hold-this-product' ), 'color' => 'blue' ),
-			'description' => '<p>' . esc_html__( 'The expiration schedule is active and sampled reservation inventory states are consistent.', 'hold-this-product' ) . '</p>',
-			'actions'     => '',
-			'test'        => 'hold_this_product_operations',
-		);
-		if ( $cron_missing || $inconsistent ) {
-			$result['label'] = __( 'Reservation operations need attention', 'hold-this-product' );
-			$result['status'] = 'critical';
-			$messages = array();
-			if ( $cron_missing ) {
-				$messages[] = __( 'The reservation expiration schedule is missing.', 'hold-this-product' );
-			}
-			if ( $inconsistent ) {
-				/* translators: %d: number of inconsistent reservations found in the health sample. */
-				$messages[] = sprintf( _n( '%d reservation has inconsistent inventory ownership.', '%d reservations have inconsistent inventory ownership.', count( $inconsistent ), 'hold-this-product' ), count( $inconsistent ) );
-			}
-			$result['description'] = '<p>' . esc_html( implode( ' ', $messages ) ) . '</p>';
-		}
-		return $result;
+		return $this->expiration->get_site_health_result();
 	}
     
     /**
@@ -404,46 +368,14 @@ class HTP_Reservations {
      * Expire old reservations
      */
     public function expire_old_reservations() {
-        $expired = get_posts( array(
-            'post_type'     => 'htp_reservation',
-            'post_status'   => 'publish',
-            'fields'        => 'ids',
-			'posts_per_page'=> 500,
-			'no_found_rows' => true,
-            'meta_query'    => array(
-				array( 'key' => '_htp_status', 'value' => array( 'active', 'pending_approval' ), 'compare' => 'IN' ),
-				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '<=' )
-            ),
-        ) );
-        
-        foreach ( $expired as $reservation_id ) {
-            $this->expire_reservation( $reservation_id );
-        }
-        
+		$this->expiration->expire_old_reservations();
     }
     
     /**
      * Expire a single reservation
      */
 	public function expire_reservation( $reservation_id ) {
-		$previous_status = get_post_meta( $reservation_id, '_htp_status', true );
-		if ( ! in_array( $previous_status, HTP_Reservation_Status::open(), true ) ) {
-			return false;
-		}
-		$product = HTP_Reservation_Status::ACTIVE === $previous_status ? wc_get_product( (int) get_post_meta( $reservation_id, '_htp_product_id', true ) ) : null;
-		$result = $this->inventory->release( $reservation_id, $previous_status, HTP_Reservation_Status::EXPIRED, $product, (int) get_post_meta( $reservation_id, '_htp_qty', true ) );
-		if ( is_wp_error( $result ) ) {
-			return false;
-		}
-		update_post_meta( $reservation_id, '_htp_expired_from', $previous_status );
-		$email = get_post_meta( $reservation_id, '_htp_email', true );
-        
-        // Trigger expiration email notification
-        if ( $email ) {
-	            $this->notifications->dispatch( 'expired', $reservation_id, $email );
-        }
-		$this->cart_order->clear_cache();
-		return true;
+		return $this->expiration->expire_reservation( $reservation_id );
     }
     
     /**

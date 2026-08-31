@@ -25,6 +25,9 @@ function htp_assert( $condition, $message ) {
 $htp_plugin = HoldThisProduct::get_instance();
 $htp_original_options = get_option( 'holdthisproduct_options', false );
 htp_assert( $htp_plugin->reservations instanceof HTP_Reservations, 'Reservation service initialized.' );
+htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_Repository, 'Reservation repository is registered.' );
+htp_assert( $htp_plugin->get_service( 'cart_order' ) instanceof HTP_Cart_Order_Service, 'Cart and order service is registered.' );
+htp_assert( $htp_plugin->get_service( 'expiration' ) instanceof HTP_Expiration_Service, 'Expiration service is registered.' );
 htp_assert( post_type_exists( 'htp_reservation' ), 'Reservation post type is registered during normal bootstrap.' );
 
 wp_clear_scheduled_hook( HTP_Reservations::CRON_HOOK );
