@@ -1,0 +1,24 @@
+{
+  "name": "flavius-ciortan/hold-this-product",
+  "description": "Development tooling for the Hold This Product WooCommerce plugin.",
+  "type": "wordpress-plugin",
+  "license": "GPL-3.0-or-later",
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpcompatibility/php-compatibility": "^9.3",
+    "wp-coding-standards/wpcs": "^3.0"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "phpcs": "phpcs",
+    "phpcbf": "phpcbf"
+  }
+}

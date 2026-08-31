@@ -3,7 +3,13 @@
 /.distignore
 /.vscode
 /.wordpress-org
+/.github
+/bin
 /tests
+/composer.json
+/composer.lock
+/phpcs.xml.dist
+/phpunit.xml.dist
 /HoldThisProduct-review.md
 /CHANGELOG.md
 /CONTRIBUTING.md

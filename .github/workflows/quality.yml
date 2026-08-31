@@ -1,0 +1,130 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: composer install --no-interaction --prefer-dist
+      - run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: vendor/bin/phpcs
+
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '7.4'
+            wordpress: '6.5.5'
+            woocommerce: '8.0.3'
+          - php: '8.3'
+            wordpress: 'latest'
+            woocommerce: 'latest'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: wp-cli
+          coverage: none
+      - name: Install WordPress and WooCommerce
+        env:
+          WP_VERSION: ${{ matrix.wordpress }}
+          WC_VERSION: ${{ matrix.woocommerce }}
+        run: |
+          wp core download --path=/tmp/wordpress --version="$WP_VERSION"
+          wp config create --path=/tmp/wordpress --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306
+          wp core install --path=/tmp/wordpress --url=http://localhost --title=HTP --admin_user=admin --admin_password=admin --admin_email=admin@example.test
+          if [ "$WC_VERSION" = latest ]; then
+            wp plugin install woocommerce --path=/tmp/wordpress --activate
+          else
+            wp plugin install woocommerce --path=/tmp/wordpress --version="$WC_VERSION" --activate
+          fi
+          ln -s "$GITHUB_WORKSPACE" /tmp/wordpress/wp-content/plugins/hold-this-product
+          wp plugin activate hold-this-product --path=/tmp/wordpress
+      - name: Run integration assertions
+        run: wp eval "define('HTP_INTEGRATION_TEST', true); require WP_PLUGIN_DIR . '/hold-this-product/tests/integration-smoke.php';" --path=/tmp/wordpress
+
+  release-artifact:
+    needs: [static-analysis, integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash bin/build-release.sh
+      - name: Verify package contents
+        run: |
+          unzip -Z1 dist/*.zip > /tmp/package-files.txt
+          grep -q '^hold-this-product/HoldThisProduct.php$' /tmp/package-files.txt
+          ! grep -Eq '(^|/)(tests|IMPLEMENTATION|vendor|\.git|\.github|\.vscode)(/|$)' /tmp/package-files.txt
+          sha256sum --check dist/*.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hold-this-product-release
+          path: dist/*
+
+  plugin-check:
+    needs: release-artifact
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: wp-cli
+          coverage: none
+      - uses: actions/download-artifact@v4
+        with:
+          name: hold-this-product-release
+          path: dist
+      - run: |
+          wp core download --path=/tmp/wordpress
+          wp config create --path=/tmp/wordpress --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306
+          wp core install --path=/tmp/wordpress --url=http://localhost --title=HTP --admin_user=admin --admin_password=admin --admin_email=admin@example.test
+          wp plugin install woocommerce --path=/tmp/wordpress --activate
+          wp plugin install plugin-check --path=/tmp/wordpress --activate
+          wp plugin install dist/*.zip --path=/tmp/wordpress --activate
+          wp plugin check hold-this-product --path=/tmp/wordpress --format=table

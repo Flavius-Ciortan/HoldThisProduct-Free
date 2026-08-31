@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<ruleset name="Hold This Product">
+	<description>WordPress and PHP 7.4 compatibility rules for Hold This Product.</description>
+
+	<file>HoldThisProduct.php</file>
+	<file>includes</file>
+	<file>templates</file>
+	<file>uninstall.php</file>
+
+	<exclude-pattern>vendor/*</exclude-pattern>
+	<arg name="basepath" value="."/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+	<config name="testVersion" value="7.4-"/>
+
+	<rule ref="WordPress-Core"/>
+	<rule ref="WordPress-Docs"/>
+	<rule ref="PHPCompatibility">
+		<exclude name="PHPCompatibility.FunctionUse.NewFunctions.wp_dateFound"/>
+	</rule>
+
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>HoldThisProduct.php</exclude-pattern>
+	</rule>
+</ruleset>
