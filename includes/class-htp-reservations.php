@@ -95,6 +95,11 @@ class HTP_Reservations {
 		return $this->expiration->get_site_health_result();
 	}
 
+	/** Return reservation counts for admin summaries and extensions. */
+	public function get_status_counts() {
+		return $this->repository->get_status_counts();
+	}
+
 	/**
 	 * Register custom post type for reservations
 	 */

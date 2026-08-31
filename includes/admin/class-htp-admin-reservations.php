@@ -195,7 +195,7 @@ class HTP_Admin_Reservations {
 			wp_send_json_error( 'Reservation is not active.' );
 		}
 
-			$result = $this->get_reservations_handler()->cancel_reservation( $reservation_id );
+		$result = $this->get_reservations_handler()->cancel_reservation( $reservation_id );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message() );
 		}
@@ -293,11 +293,9 @@ class HTP_Admin_Reservations {
 	}
 
 	private function get_filtered_reservations( $status_filter = 'all', $search_query = '', $search_type = 'email', $page = 1 ) {
-			global $wpdb;
-
-			$meta_query               = array();
-			$customer_reservation_ids = null;
-			$force_empty              = false;
+		$meta_query               = array();
+		$customer_reservation_ids = null;
+		$force_empty              = false;
 
 		if ( 'all' !== $status_filter ) {
 			$meta_query[] = array(
@@ -318,10 +316,14 @@ class HTP_Admin_Reservations {
 					break;
 
 				case 'product':
-					$product_ids = $wpdb->get_col(
-						$wpdb->prepare(
-							"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'product' AND post_title LIKE %s",
-							'%' . $wpdb->esc_like( $search_query ) . '%'
+					$product_ids = get_posts(
+						array(
+							'post_type'      => 'product',
+							'post_status'    => 'any',
+							'fields'         => 'ids',
+							'posts_per_page' => 100,
+							'no_found_rows'  => true,
+							's'              => $search_query,
 						)
 					);
 
@@ -442,30 +444,7 @@ class HTP_Admin_Reservations {
 	}
 
 	private function get_reservations_summary() {
-		$cached = wp_cache_get( 'admin_summary', 'holdthisproduct' );
-		if ( false !== $cached ) {
-			return $cached;
-		}
-		global $wpdb;
-		$rows             = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count
-				FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
-				WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
-				HTP_Reservation_Meta::STATUS
-			),
-			OBJECT_K
-		);
-		$summary          = array_fill_keys( HTP_Reservation_Status::all(), 0 );
-		$summary['total'] = 0;
-		foreach ( (array) $rows as $status => $row ) {
-			if ( isset( $summary[ $status ] ) ) {
-				$summary[ $status ] = (int) $row->reservation_count;
-				$summary['total']  += (int) $row->reservation_count;
-			}
-		}
-		wp_cache_set( 'admin_summary', $summary, 'holdthisproduct', MINUTE_IN_SECONDS );
-		return $summary;
+		return $this->get_reservations_handler()->get_status_counts();
 	}
 
 	private function render_row( $reservation ) {

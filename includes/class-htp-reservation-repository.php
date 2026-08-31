@@ -6,6 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Reservation persistence queries shared by Free and compatible add-ons. */
 final class HTP_Reservation_Repository implements HTP_Reservation_Repository_Interface {
+	const STATUS_COUNTS_CACHE_KEY = 'reservation_status_counts';
+
+	public function __construct() {
+		add_action( 'htp_reservation_transitioned', array( $this, 'invalidate_status_counts' ) );
+		add_action( 'deleted_post', array( $this, 'invalidate_status_counts_for_deleted_post' ), 10, 2 );
+	}
+
 	public function find_active( $product_id, $user_id ) {
 		$ids = get_posts(
 			array(
@@ -184,5 +191,51 @@ final class HTP_Reservation_Repository implements HTP_Reservation_Repository_Int
 			}
 		}
 		return false;
+	}
+
+	/** Return cached counts for every known reservation status and the total. */
+	public function get_status_counts() {
+		$counts = wp_cache_get( self::STATUS_COUNTS_CACHE_KEY, 'holdthisproduct' );
+		if ( false !== $counts ) {
+			return $counts;
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- A single cached aggregate is more efficient than one WP_Query per status.
+		$rows            = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
+				WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish'
+				GROUP BY pm.meta_value",
+				HTP_Reservation_Meta::STATUS
+			),
+			OBJECT_K
+		);
+		$counts          = array_fill_keys( HTP_Reservation_Status::all(), 0 );
+		$counts['total'] = 0;
+		foreach ( (array) $rows as $status => $row ) {
+			if ( isset( $counts[ $status ] ) ) {
+				$counts[ $status ] = (int) $row->reservation_count;
+				$counts['total']  += (int) $row->reservation_count;
+			}
+		}
+
+		wp_cache_set( self::STATUS_COUNTS_CACHE_KEY, $counts, 'holdthisproduct', MINUTE_IN_SECONDS );
+		return $counts;
+	}
+
+	/** Clear aggregate counts after a completed lifecycle transition. */
+	public function invalidate_status_counts() {
+		wp_cache_delete( self::STATUS_COUNTS_CACHE_KEY, 'holdthisproduct' );
+	}
+
+	/** Clear aggregate counts when a reservation record is deleted directly. */
+	public function invalidate_status_counts_for_deleted_post( $post_id, $post ) {
+		unset( $post_id );
+		if ( $post instanceof WP_Post && 'htp_reservation' === $post->post_type ) {
+			$this->invalidate_status_counts();
+		}
 	}
 }

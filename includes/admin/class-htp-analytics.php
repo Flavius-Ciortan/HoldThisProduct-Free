@@ -137,21 +137,9 @@ class HTP_Analytics {
 	 * Get reservation statistics
 	 */
 	private function get_reservation_stats() {
-		global $wpdb;
-		$rows           = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
-				HTP_Reservation_Meta::STATUS
-			),
-			OBJECT_K
-		);
-		$stats          = array_fill_keys( HTP_Reservation_Status::all(), 0 );
-		$stats['total'] = 0;
-		foreach ( (array) $rows as $status => $row ) {
-			if ( isset( $stats[ $status ] ) ) {
-				$stats[ $status ] = (int) $row->reservation_count;
-				$stats['total']  += (int) $row->reservation_count;
-			}
+		$stats = $this->reservations ? $this->reservations->get_status_counts() : array_fill_keys( HTP_Reservation_Status::all(), 0 );
+		if ( ! isset( $stats['total'] ) ) {
+			$stats['total'] = array_sum( $stats );
 		}
 		$stats['conversion_rate'] = $stats['total'] ? round( ( $stats[ HTP_Reservation_Status::FULFILLED ] / $stats['total'] ) * 100, 1 ) : 0;
 		return $stats;
