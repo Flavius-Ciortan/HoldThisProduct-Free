@@ -54,6 +54,7 @@ htp_assert( false !== strpos( (string) wp_scripts()->get_data( 'holdthisproduct-
 $htp_admin->enqueue_admin_scripts( 'toplevel_page_holdthisproduct-settings' );
 htp_assert( wp_script_is( 'holdthisproduct-admin-settings', 'enqueued' ), 'Settings interactions use a versioned external asset.' );
 $htp_filtered_method = new ReflectionMethod( $htp_admin_reservations, 'get_filtered_reservations' );
+$htp_filtered_method->setAccessible( true );
 $htp_invalid_product_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'not-a-number', 'product_id', 1 );
 $htp_missing_product_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'HTP product that cannot exist 19f546ef', 'product', 1 );
 htp_assert( $htp_invalid_product_query instanceof WP_Query && 0 === (int) $htp_invalid_product_query->found_posts, 'Invalid product ID search returns an empty WP_Query.' );
