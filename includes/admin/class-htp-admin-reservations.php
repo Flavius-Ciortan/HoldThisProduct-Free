@@ -24,8 +24,52 @@ class HTP_Admin_Reservations {
 	}
 
     public function enqueue_assets() {
-        wp_enqueue_script( 'jquery' );
-        wp_enqueue_style( 'holdthisproduct-admin-style', HTP_PLUGIN_URL . 'assets/css/admin-style.css', array(), HTP_VERSION );
+		wp_enqueue_style( 'holdthisproduct-admin-style', HTP_PLUGIN_URL . 'assets/css/admin-style.css', array(), HTP_VERSION );
+		wp_enqueue_script( 'holdthisproduct-admin-reservations', HTP_PLUGIN_URL . 'assets/js/admin-reservations.js', array( 'jquery' ), HTP_VERSION, true );
+		wp_localize_script(
+			'holdthisproduct-admin-reservations',
+			'htpReservationsAdmin',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonces'  => array(
+					'delete'  => wp_create_nonce( 'htp_admin_delete' ),
+					'approve' => wp_create_nonce( 'htp_admin_approve' ),
+					'deny'    => wp_create_nonce( 'htp_admin_deny' ),
+					'cancel'  => wp_create_nonce( 'htp_admin_cancel' ),
+				),
+				'strings' => array(
+					'thisProduct'    => __( 'this product', 'hold-this-product' ),
+					'delete'         => __( 'Delete', 'hold-this-product' ),
+					'deleting'       => __( 'Deleting...', 'hold-this-product' ),
+					'deleted'        => __( 'Reservation deleted successfully.', 'hold-this-product' ),
+					'deleteFailed'   => __( 'Reservation could not be deleted.', 'hold-this-product' ),
+					'approve'        => __( 'Approve', 'hold-this-product' ),
+					'approving'      => __( 'Approving...', 'hold-this-product' ),
+					'approved'       => __( 'Reservation approved successfully.', 'hold-this-product' ),
+					'approveFailed'  => __( 'Reservation could not be approved.', 'hold-this-product' ),
+					'active'         => __( 'Active', 'hold-this-product' ),
+					'deny'           => __( 'Deny', 'hold-this-product' ),
+					'denying'        => __( 'Denying...', 'hold-this-product' ),
+					'denied'         => __( 'Reservation denied successfully.', 'hold-this-product' ),
+					'deniedStatus'   => __( 'Denied', 'hold-this-product' ),
+					'denyFailed'     => __( 'Reservation could not be denied.', 'hold-this-product' ),
+					'denyReason'     => __( 'Please provide a reason for denying this reservation (optional):', 'hold-this-product' ),
+					'cancel'         => __( 'Cancel', 'hold-this-product' ),
+					'cancelling'     => __( 'Cancelling...', 'hold-this-product' ),
+					'cancelled'      => __( 'Reservation cancelled successfully.', 'hold-this-product' ),
+					'cancelledStatus'=> __( 'Cancelled', 'hold-this-product' ),
+					'cancelFailed'   => __( 'Reservation could not be cancelled.', 'hold-this-product' ),
+					'missingId'      => __( 'Missing reservation ID.', 'hold-this-product' ),
+					'requestFailed'  => __( 'Request failed. Please try again.', 'hold-this-product' ),
+					/* translators: 1: customer, 2: product. */
+					'confirmDelete'  => __( 'Permanently delete the reservation for %1$s on %2$s? This action cannot be undone.', 'hold-this-product' ),
+					/* translators: 1: customer, 2: product. */
+					'confirmApprove' => __( 'Approve the reservation for %1$s on %2$s?', 'hold-this-product' ),
+					/* translators: 1: customer, 2: product. */
+					'confirmCancel'  => __( 'Cancel the reservation for %1$s on %2$s?', 'hold-this-product' ),
+				),
+			)
+		);
     }
 
     public function render_page() {
@@ -112,219 +156,6 @@ class HTP_Admin_Reservations {
             <?php endif; ?>
         </div>
 
-        <script>
-        jQuery(document).ready(function($) {
-            function showAdminNotice(type, message) {
-                $('.htp-inline-notice').remove();
-                var $notice = $('<div class="notice htp-inline-notice is-dismissible"></div>').addClass('notice-' + type);
-                $('<p></p>').text(message).appendTo($notice);
-                $notice.insertAfter('.wrap h1');
-            }
-
-            function createActionButton(actionClass, label, reservationId, customer, product) {
-                return $('<button></button>', {
-                    type: 'button',
-                    class: 'button button-small ' + actionClass,
-                    text: label
-                }).attr({
-                    'data-reservation-id': reservationId,
-                    'data-customer': customer,
-                    'data-product': product
-                });
-            }
-
-            $('#filter-reservations').on('click', function() {
-                var status = $('#status-filter').val();
-                var searchType = $('#search-type').val();
-                var search = $('#reservation-search').val();
-
-                var url = new URL(window.location);
-                url.searchParams.set('status', status);
-                url.searchParams.set('search_type', searchType);
-                if (search) {
-                    url.searchParams.set('search', search);
-                } else {
-                    url.searchParams.delete('search');
-                }
-                window.location.href = url.toString();
-            });
-
-            $('#clear-filters').on('click', function() {
-                var url = new URL(window.location);
-                url.searchParams.delete('status');
-                url.searchParams.delete('search');
-                url.searchParams.delete('search_type');
-                window.location.href = url.toString();
-            });
-
-            $('#reservation-search').on('keypress', function(e) {
-                if (e.which === 13) {
-                    $('#filter-reservations').click();
-                }
-            });
-
-            $(document).on('click', '.htp-delete-reservation', function() {
-                var $btn = $(this);
-                var reservationId = $btn.data('reservation-id');
-                var customer = $btn.data('customer');
-                var product = $btn.data('product') || 'this product';
-
-                if (confirm('Are you sure you want to permanently delete the reservation for ' + customer + ' on ' + product + '? This action cannot be undone.')) {
-                    $btn.prop('disabled', true).text('Deleting...');
-
-                    $.post(ajaxurl, {
-                        action: 'htp_delete_admin_reservation',
-                        reservation_id: reservationId,
-                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_delete' ) ); ?>'
-                    })
-                    .done(function(response) {
-                        if (response.success) {
-                            $btn.closest('tr').fadeOut(function() {
-                                $(this).remove();
-                                var $displayNum = $('.displaying-num');
-                                if ($displayNum.length > 0) {
-                                    var currentText = $displayNum.text();
-                                    var currentNum = parseInt(currentText.match(/\\d+/));
-                                    if (currentNum > 0) {
-                                        $displayNum.text((currentNum - 1) + ' reservations');
-                                    }
-                                }
-                            });
-
-                            showAdminNotice('success', 'Reservation deleted successfully.');
-                        } else {
-                            showAdminNotice('error', response.data || 'Reservation could not be deleted.');
-                            $btn.prop('disabled', false).text('Delete');
-                        }
-                    })
-                    .fail(function() {
-                        showAdminNotice('error', 'Request failed. Please try again.');
-                        $btn.prop('disabled', false).text('Delete');
-                    });
-                }
-            });
-
-            $(document).on('click', '.htp-approve-reservation', function() {
-                var $btn = $(this);
-                var reservationId = $btn.data('reservation-id');
-                var customer = $btn.data('customer');
-                var product = $btn.data('product') || 'this product';
-
-                if (confirm('Are you sure you want to approve the reservation for ' + customer + ' on ' + product + '?')) {
-                    $btn.prop('disabled', true).text('Approving...');
-
-                    $.post(ajaxurl, {
-                        action: 'htp_approve_reservation',
-                        reservation_id: reservationId,
-                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_approve' ) ); ?>'
-                    })
-                    .done(function(response) {
-                        if (response.success) {
-                            var $row = $btn.closest('tr');
-                            var $actionsCell = $row.find('td:last-child');
-                            $actionsCell.empty().append(
-                                createActionButton('htp-cancel-reservation', 'Cancel', reservationId, customer, product)
-                            );
-
-                            var $statusCell = $row.find('td:nth-child(3) span');
-                            $statusCell.removeClass('status-pending-approval').addClass('status-active').text('Active');
-
-                            showAdminNotice('success', 'Reservation approved successfully.');
-                        } else {
-                            showAdminNotice('error', response.data || 'Reservation could not be approved.');
-                            $btn.prop('disabled', false).text('Approve');
-                        }
-                    })
-                    .fail(function() {
-                        showAdminNotice('error', 'Request failed. Please try again.');
-                        $btn.prop('disabled', false).text('Approve');
-                    });
-                }
-            });
-
-            $(document).on('click', '.htp-deny-reservation', function() {
-                var $btn = $(this);
-                var reservationId = $btn.data('reservation-id');
-                var customer = $btn.data('customer');
-                var product = $btn.data('product') || 'this product';
-
-                var reason = prompt('Please provide a reason for denying this reservation (optional):');
-                if (reason !== null) {
-                    $btn.prop('disabled', true).text('Denying...');
-
-                    $.post(ajaxurl, {
-                        action: 'htp_deny_reservation',
-                        reservation_id: reservationId,
-                        reason: reason,
-                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_deny' ) ); ?>'
-                    })
-                    .done(function(response) {
-                        if (response.success) {
-                            var $row = $btn.closest('tr');
-                            var $actionsCell = $row.find('td:last-child');
-                            $actionsCell.empty().append(
-                                createActionButton('button-link-delete htp-delete-reservation', 'Delete', reservationId, customer, product)
-                            );
-
-                            var $statusCell = $row.find('td:nth-child(3) span');
-                            $statusCell.removeClass('status-pending-approval').addClass('status-denied').text('Denied');
-
-                            $row.find('td:nth-child(6)').text('—').removeClass('time-left-critical time-left-warning');
-
-                            showAdminNotice('success', 'Reservation denied successfully.');
-                        } else {
-                            showAdminNotice('error', response.data || 'Reservation could not be denied.');
-                            $btn.prop('disabled', false).text('Deny');
-                        }
-                    })
-                    .fail(function() {
-                        showAdminNotice('error', 'Request failed. Please try again.');
-                        $btn.prop('disabled', false).text('Deny');
-                    });
-                }
-            });
-
-            $(document).on('click', '.htp-cancel-reservation', function() {
-                var $btn = $(this);
-                var reservationId = $btn.data('reservation-id');
-                var customer = $btn.data('customer');
-                var product = $btn.data('product') || 'this product';
-
-                if (!reservationId) {
-                    showAdminNotice('error', 'Missing reservation ID.');
-                    return;
-                }
-
-                if (confirm('Are you sure you want to cancel the reservation for ' + customer + ' on ' + product + '?')) {
-                    $btn.prop('disabled', true).text('Cancelling...');
-
-                    $.post(ajaxurl, {
-                        action: 'htp_cancel_admin_reservation',
-                        reservation_id: reservationId,
-                        nonce: '<?php echo esc_js( wp_create_nonce( 'htp_admin_cancel' ) ); ?>'
-                    })
-                    .done(function(response) {
-                        if (response.success) {
-                            var $row = $btn.closest('tr');
-                            $row.find('td:nth-child(3) span').removeClass().addClass('status-cancelled').text('Cancelled');
-                            $row.find('td:nth-child(6)').text('—').removeClass('time-left-critical time-left-warning');
-                            $row.find('td:last-child').empty().append(
-                                createActionButton('button-link-delete htp-delete-reservation', 'Delete', reservationId, customer, product)
-                            );
-                            showAdminNotice('success', 'Reservation cancelled successfully.');
-                        } else {
-                            showAdminNotice('error', response.data || 'Reservation could not be cancelled.');
-                            $btn.prop('disabled', false).text('Cancel');
-                        }
-                    })
-                    .fail(function() {
-                        showAdminNotice('error', 'Request failed. Please try again.');
-                        $btn.prop('disabled', false).text('Cancel');
-                    });
-                }
-            });
-        });
-        </script>
         <?php
     }
 

@@ -47,6 +47,11 @@ require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin-reservations.php'
 require_once HTP_PLUGIN_PATH . 'includes/admin/class-htp-admin.php';
 $htp_admin = new HTP_Admin( $htp_plugin->reservations );
 $htp_admin_reservations = new HTP_Admin_Reservations( $htp_plugin->reservations );
+$htp_admin_reservations->enqueue_assets();
+htp_assert( wp_script_is( 'holdthisproduct-admin-reservations', 'enqueued' ), 'Reservation admin actions use a versioned external asset.' );
+htp_assert( false !== strpos( (string) wp_scripts()->get_data( 'holdthisproduct-admin-reservations', 'data' ), 'htpReservationsAdmin' ), 'Reservation admin asset receives localized nonces and messages.' );
+$htp_admin->enqueue_admin_scripts( 'toplevel_page_holdthisproduct-settings' );
+htp_assert( wp_script_is( 'holdthisproduct-admin-settings', 'enqueued' ), 'Settings interactions use a versioned external asset.' );
 $htp_filtered_method = new ReflectionMethod( $htp_admin_reservations, 'get_filtered_reservations' );
 $htp_invalid_product_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'not-a-number', 'product_id', 1 );
 $htp_missing_product_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'HTP product that cannot exist 19f546ef', 'product', 1 );
@@ -94,6 +99,12 @@ $htp_immediate_product->set_regular_price( '10' );
 $htp_immediate_product->set_manage_stock( true );
 $htp_immediate_product->set_stock_quantity( 2 );
 $htp_immediate_product_id = $htp_immediate_product->save();
+$htp_original_post = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
+$GLOBALS['post'] = get_post( $htp_immediate_product_id );
+$htp_admin->enqueue_admin_scripts( 'post.php' );
+htp_assert( wp_script_is( 'holdthisproduct-admin-product', 'enqueued' ), 'Product reservation actions use a versioned external asset.' );
+htp_assert( false !== strpos( (string) wp_scripts()->get_data( 'holdthisproduct-admin-product', 'data' ), 'htpProductReservations' ), 'Product admin asset receives its localized nonce and messages.' );
+$GLOBALS['post'] = $htp_original_post;
 update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 0, 'enable_email_notifications' => 0 ) );
 $htp_eligibility_passthrough = static function ( $reservable ) {
 	return $reservable;
