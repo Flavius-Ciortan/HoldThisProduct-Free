@@ -1,454 +1,153 @@
-# HoldThisProduct - User Guide
+# Hold This Product User Guide
 
-Welcome to HoldThisProduct! This comprehensive guide will help you set up and use the plugin to enable product reservations in your WooCommerce store.
+This guide applies to Hold This Product Free 1.1.0.
 
-## Table of Contents
+## Requirements
 
-1. [Getting Started](#getting-started)
-2. [Initial Setup](#initial-setup)
-3. [Configuring Settings](#configuring-settings)
-4. [Enabling Product Reservations](#enabling-product-reservations)
-5. [Customer Experience](#customer-experience)
-6. [Managing Reservations](#managing-reservations)
-7. [Email Notifications](#email-notifications)
-8. [Admin Approval Workflow](#admin-approval-workflow)
-9. [Troubleshooting](#troubleshooting)
-10. [Best Practices](#best-practices)
+- WordPress 6.5 or newer.
+- WooCommerce 8.0 or newer.
+- PHP 7.4 or newer.
+- Published simple products with WooCommerce stock management enabled and positive stock.
+- Logged-in customer accounts.
 
----
+The Free edition reserves one unit per reservation. Variable, grouped, external, composite, and bundled products are not supported.
 
-## Getting Started
+## Installation
 
-### Prerequisites
+1. Install and activate WooCommerce.
+2. Install Hold This Product from WordPress.org, or upload the release ZIP under **Plugins > Add New > Upload Plugin**.
+3. Activate **Hold This Product**.
+4. Open **Hold This Product > Settings**.
+5. Enable reservations and save the settings.
 
-Before installing HoldThisProduct, ensure you have:
+## Settings
 
-- WordPress 5.8 or higher
-- WooCommerce 5.0 or higher
-- PHP 7.4 or higher
-- Active WooCommerce store with products
+### General Settings
 
-### Installation
+- **Enable Reservation** is the global switch for the customer reservation workflow.
+- **Max Reservations Per User** limits concurrent pending and active reservations for one customer. The accepted range is 1 to 100.
+- **Reservation Duration** controls how long an active stock hold remains open. The accepted range is 1 to 168 hours.
+- **Approval Request Duration** controls how long a pending request remains open. The accepted range is 1 to 168 hours. This timer is separate from the active duration.
+- **Enable Email Notifications** sends the built-in transactional messages through the normal WordPress mail pipeline.
+- **Require Admin Approval** creates a pending request first. Pending requests do not reduce stock; approving one starts the active duration and holds stock.
 
-1. **Via WordPress Admin:**
-   - Navigate to **Plugins > Add New**
-   - Search for "HoldThisProduct"
-   - Click **Install Now**, then **Activate**
+### Pop-up Customization
 
-2. **Manual Installation:**
-   - Download the plugin ZIP file
-   - Go to **Plugins > Add New > Upload Plugin**
-   - Upload the ZIP file and click **Install Now**
-   - Click **Activate Plugin**
+The logged-in customer reservation modal supports:
 
----
+- Border radius from 0 to 50 pixels.
+- Background and text colors.
+- An allowlisted font family.
+- Font size from 10 to 40 pixels.
 
-## Initial Setup
+The modal includes a semantic dialog, keyboard focus containment, Escape-to-close behavior, focus restoration, live notice output, and reduced-motion support.
 
-After activation, follow these steps:
+## Customer Workflow
 
-### 1. Access Plugin Settings
+### Immediate Reservations
 
-Navigate to **HoldThisProduct > Settings** in your WordPress admin dashboard.
+1. The customer signs in and opens an eligible product.
+2. The customer selects **Reserve Product** and confirms the request.
+3. The reservation becomes **Active** and stock decreases by one.
+4. The customer can open **My Account > Reserved products**, cancel the hold, or add it to the cart.
+5. Checkout marks the linked reservation **Purchased** without reducing the held unit a second time.
+6. If the deadline passes first, the reservation becomes **Expired** and stock is restored once.
 
+### Approval Workflow
 
-### 2. Enable Reservations Globally
+1. The customer submits a request and sees a pending-approval confirmation.
+2. The request becomes **Pending approval**. Stock is unchanged.
+3. A merchant approves or denies the request under **Hold This Product > Reservations**.
+4. Approval starts the active duration and decreases stock by one.
+5. Denial closes the request without changing stock.
+6. An unanswered request becomes **Expired** when its pending deadline passes.
 
-Toggle **Enable Reservation** to ON. This activates the reservation system site-wide.
+### Cancellation and Orders
 
-### 3. Configure Basic Settings
+- A customer can cancel an eligible pending or active reservation from My Account.
+- A merchant can cancel an eligible reservation from the admin page.
+- Cancelling an active hold restores stock exactly once.
+- A completed checkout transfers the held inventory obligation to the WooCommerce order.
+- A qualifying cancelled/failed order changes the reservation to **Order cancelled** and restores inventory once.
 
-Set the following initial parameters:
+## Merchant Operations
 
-- **Max Reservations Per User:** Default is 1 (recommended to start)
-- **Reservation Duration:** Default is 24 hours
-- **Email Notifications:** Enable if you want automated emails
+Administrators and WooCommerce Shop Managers can use the plugin.
 
----
+### Reservations Page
 
-## Configuring Settings
+Open **Hold This Product > Reservations** to:
 
-### General Settings Tab
+- Filter by pending, active, expired, cancelled, purchased, denied, or order-cancelled status.
+- Search by email, product name, product ID, display name, email, or login.
+- Approve or deny pending requests.
+- Cancel pending or active reservations.
+- Delete terminal reservation records.
+- Review cached status totals and paginated results.
 
-#### Enable Reservation
-- **Purpose:** Master switch for the entire reservation system
-- **When OFF:** No products can be reserved
-- **When ON:** Eligible products will show the Reserve button
+Actions are nonce-protected and report the real lifecycle result. If another process changes a reservation first, the interface does not report a false success.
 
-#### Max Reservations Per User
-- **Range:** 1 or more
-- **Purpose:** Limit how many products a user can reserve simultaneously
-- **Use Case:** Set to 1 for exclusive items, higher for flexible shopping
-- **Example:** Setting to 3 allows users to reserve up to 3 different products at once
+### Product Inventory Panel
 
-#### Reservation Duration (hours)
-- **Range:** 1-168 hours (1 hour to 1 week)
-- **Purpose:** How long products remain reserved before automatic expiration
-- **Recommended:**
-  - 24 hours: Standard products
-  - 48-72 hours: Custom or consultation-required items
-  - 1 week: Pre-orders or special orders
+Edit a product and open its **Inventory** tab to view active reservations for that product.
 
-#### Enable Email Notifications
-- **Purpose:** Send automated emails for reservation events
-- **Events Covered:**
-  - Reservation created
-  - Reservation expired
-  - Reservation approved/denied (if approval required)
+### Analytics
 
-#### Require Admin Approval for Reservations
-- **Purpose:** Manually approve each reservation before it becomes active
-- **Use Cases:**
-  - High-value items
-  - Limited stock products
-  - Custom order verification
-  - Fraud prevention
-- **Workflow:** Reservations stay in "Pending Approval" until you approve/deny them
+Open **Hold This Product > Analytics** to view current totals, status counts, conversion percentage, and recent reservations. This is operational summary data, not historical trend reporting.
 
-### Pop-up Customization Tab
+### Site Health
 
-Customize the reservation modal appearance:
+WordPress Site Health reports whether:
 
-- **Modal Title:** Default: "Reserve this Product"
-- **Button Text:** Default: "Confirm Reservation"
-- **Colors:** Customize to match your brand
-- **Border Radius:** Adjust corner roundness
-- **Font Settings:** Typography customization
+- The reservation expiration event is scheduled.
+- Reservation status and inventory ownership are consistent.
 
----
+The plugin recreates a missing expiration event during normal health checks. Resolve any reported inventory inconsistency before manually changing WooCommerce stock.
 
-## Product Requirements
+## Email Delivery
 
-In the free version, reservations are enabled globally (there is no per-product enable/disable flag).
+When notifications are enabled, the plugin sends built-in messages for creation, pending approval, approval, denial, and expiration. It uses `wp_mail()` through WordPress/WooCommerce mail handling.
 
-For reservations to work correctly, products should have:
+An SMTP plugin is not a Hold This Product requirement. Each merchant should decide based on hosting mail reliability, delivery logs, and authentication needs. If messages are generated but not delivered, inspect WooCommerce/WordPress mail delivery and the host's outbound-mail policy.
 
-- ✅ **Stock management enabled** (WooCommerce Inventory tab)
-- ✅ A **stock quantity** set
-- ✅ Global reservations **enabled in plugin settings**
+## Status Reference
 
-### Product Types Supported
-
-- **Simple Products:** ✅ Fully supported
-- **Variable Products:** ⚠️ Coming in future update
-- **Grouped Products:** ❌ Not supported
-- **External Products:** ❌ Not supported
-
----
-
-## Customer Experience
-
-### Reservation Flow
-
-1. **Product Page:**
-   - Customer views a product
-   - Sees "Reserve Product" button next to Add to Cart
-   - Button only visible to logged-in users
-
-2. **Clicking Reserve:**
-   - Modal popup appears
-   - Shows reservation terms and duration
-   - Customer clicks "Confirm Reservation"
-
-3. **Confirmation:**
-   - Success message displayed
-   - Stock quantity decreases by 1
-   - Email confirmation sent (if enabled)
-   - Reservation added to My Account
-
-4. **My Account Page:**
-   - Navigate to **My Account > Reserved products**
-   - View all active reservations
-   - See expiration countdown
-   - Quick "Add to Cart" button
-   - Option to cancel reservation
-
-5. **Completing Purchase:**
-   - Customer adds reserved product to cart
-   - Completes checkout normally
-   - Reservation marked as fulfilled
-   - Stock remains adjusted
-
-6. **Expiration:**
-   - If time runs out, stock automatically restores
-   - Customer receives expiration notification
-   - Reservation removed from My Account
-
----
-
-## Managing Reservations
-
-### Admin Dashboard
-
-Navigate to **HoldThisProduct > Reservations** for comprehensive management.
-
-#### View Reservations
-
-**Columns Displayed:**
-- Product Name (linked to edit page)
-- Customer (name and email)
-- Status (Active, Expired, Cancelled, Fulfilled, Pending Approval, Denied)
-- Reserved Date
-- Expires Date
-- Time Left (color-coded urgency)
-- Actions (Cancel, Delete, Approve, Deny)
-
-#### Filter Reservations
-
-Use the filter dropdown to show:
-- **All:** Every reservation regardless of status
-- **Active:** Currently valid reservations
-- **Expired:** Time ran out, stock restored
-- **Cancelled:** User or admin cancelled
-- **Fulfilled:** Purchase completed
-- **Pending Approval:** Awaiting admin decision
-- **Denied:** Admin rejected
-
-#### Search Functionality
-
-Search by:
-- Customer email
-- Customer name
-- Product name
-
-#### Reservation Actions
-
-**Cancel:**
-- Immediately expires the reservation
-- Restores product stock
-- Sends cancellation notification to customer
-- Use when: Customer requests cancellation or stock needed urgently
-
-**Delete:**
-- Permanently removes reservation record
-- Only available for non-active reservations
-- Use when: Cleaning up old expired/cancelled records
-
-**Approve:**
-- Only for "Pending Approval" reservations
-- Activates the reservation
-- Starts expiration countdown
-- Sends approval email
-
-**Deny:**
-- Only for "Pending Approval" reservations
-- Rejects the reservation request
-- Restores stock immediately
-- Sends denial email with optional reason
-
-### Product-Level Reservations
-
-View reservations for specific products:
-
-1. Edit any product
-2. Go to **Product Data > Inventory** tab
-3. Scroll to **Active Reservations** section
-4. See all current reservations for this product
-5. Cancel individual reservations if needed
-
----
-
-## Email Notifications
-
-### Email Types
-
-1. **Reservation Created**
-   - Sent when: User successfully creates reservation
-   - Includes: Product details, expiration time, next steps
-
-2. **Reservation Expired**
-   - Sent when: Reservation time runs out
-   - Includes: Apology, invitation to reserve again
-
-3. **Reservation Approved**
-   - Sent when: Admin approves pending reservation
-   - Includes: Confirmation, expiration time, purchase link
-
-4. **Reservation Denied**
-   - Sent when: Admin denies reservation
-   - Includes: Denial reason (if provided), alternative suggestions
-
-### Customizing Emails
-
-Email templates are located in:
-```
-wp-content/plugins/HoldThisProduct/templates/emails/
-```
-
-To customize:
-1. Copy template to your theme:
-   ```
-   your-theme/holdthisproduct/emails/[template-name].php
-   ```
-2. Edit as needed
-3. Changes will be preserved during plugin updates
-
----
-
-## Admin Approval Workflow
-
-When "Require Admin Approval" is enabled:
-
-### Customer Perspective
-
-1. Customer creates reservation
-2. Receives "pending approval" notification
-3. Stock is reserved but reservation not active yet
-4. Waits for admin decision
-5. Receives approval/denial email
-
-### Admin Process
-
-1. Go to **HoldThisProduct > Reservations**
-2. Filter by **Pending Approval**
-3. Review each request:
-   - Check customer history
-   - Verify stock availability
-   - Assess request legitimacy
-
-4. Take action:
-   - **Approve:** Click Approve button
-   - **Deny:** Click Deny, optionally add reason
-
-### Use Cases
-
-- High-value luxury items
-- Limited edition products
-- Custom manufacturing orders
-- Fraud prevention for new customers
-- Managing overwhelming demand
-
----
+- **Pending approval:** Waiting for a merchant decision; no stock is held.
+- **Active:** One stock unit is held for the customer.
+- **Expired:** The relevant deadline passed; held stock was released when applicable.
+- **Cancelled:** The customer or merchant cancelled the reservation.
+- **Purchased:** Checkout transferred the held unit to an order.
+- **Denied:** A merchant rejected a pending request.
+- **Order cancelled:** A qualifying order cancellation released the transferred unit.
 
 ## Troubleshooting
 
-### Reserve Button Not Showing
+### Reserve button is missing
 
-**Possible Causes:**
-1. Global reservations disabled in settings
-2. Product reservations not enabled
-3. Product stock management disabled
-4. No stock available
-5. User not logged in
-6. Theme compatibility issue
+Confirm that reservations are enabled, the customer is logged in, and the product is published, purchasable, simple, stock-managed, and has positive stock.
 
-**Solutions:**
-- Verify all settings enabled
-- Check product inventory settings
-- Clear cache (if using caching plugin)
-- Test with default WordPress theme
+### Customer cannot create another reservation
 
-### Reservations Not Expiring
+Check for an existing pending/active reservation for the same product and check the global per-customer limit. Expired pending requests are excluded from the quota even before scheduled cleanup runs.
 
-**Possible Causes:**
-1. WordPress cron not running
-2. Server cron disabled
+### Reservations are not expiring
 
-**Solutions:**
-- Install WP Crontrol plugin to verify cron
-- Contact hosting provider about cron jobs
-- Check for cron-blocking plugins
+Open **Tools > Site Health** and inspect the Hold This Product expiration test. WordPress cron still requires traffic or a server-side cron runner to execute due events reliably.
 
-### Email Not Sending
+### Stock appears incorrect
 
-**Possible Causes:**
-1. Email notifications disabled in settings
-2. WordPress mail function issues
-3. Server email restrictions
+Do not repair the reservation by editing its post meta. Check Site Health, the reservation status, its linked order, and WooCommerce order notes. Lifecycle operations are idempotent; repeating a completed operation should not change stock again.
 
-**Solutions:**
-- Verify email settings enabled
-- Install WP Mail SMTP plugin
-- Check spam folders
-- Test with default WordPress email
+### Email is not delivered
 
-### Stock Not Restoring
+Enable notifications, confirm the customer address, and test the site's general WordPress mail delivery. Add SMTP only if the merchant's environment requires it.
 
-**Possible Causes:**
-1. Manual stock adjustments during reservation
-2. Database sync issues
-3. Plugin conflict
+## Data and Privacy
 
-**Solutions:**
-- Avoid manual stock changes for reserved products
-- Deactivate other inventory plugins temporarily
-- Check error logs for conflicts
+Reservations store customer identity, email, product, timestamps, quantity, status, inventory ownership, and linked order data where applicable. WordPress personal-data export and erasure tools include reservation records. Erasure anonymizes/deletes eligible records without abandoning an active inventory obligation.
 
----
+Uninstall permanently removes plugin settings and reservation records. Stock is restored only for reservations that still own a held inventory unit. Back up the database before uninstalling from a production store.
 
-## Best Practices
+## Developer Extensions
 
-### Setting Duration
-
-- **Quick Turnaround Products:** 12-24 hours
-- **Standard Items:** 24-48 hours
-- **Custom Orders:** 48-72 hours
-- **Pre-orders:** 1 week
-
-### Managing Limits
-
-- **High Demand:** Set limit to 1 reservation per user
-- **Normal Stock:** 2-3 reservations okay
-- **Bulk Items:** Higher limits acceptable
-
-### Customer Communication
-
-- Set clear expiration times in product descriptions
-- Explain reservation benefits
-- Add urgency messaging: "Reserved items expire in [X] hours"
-- Use the expiration notification email to encourage timely purchases
-
-### Stock Planning
-
-- Keep extra stock buffer for walk-in customers
-- Avoid using reservations for the last few units
-- Monitor reservation patterns to adjust stock
-
-### Admin Approval
-
-- Respond to pending reservations within 2-4 hours
-- Set auto-approval for trusted customers
-- Create approval criteria checklist
-- Communicate denial reasons clearly
-
-### Performance
-
-- Regularly clean up old expired/cancelled reservations
-- Monitor reservation patterns
-- Adjust duration based on conversion rates
-
----
-
-## Support
-
-Need help? Here's how to get support:
-
-1. **Documentation:** Re-read this guide
-2. **FAQ:** Check readme.txt file
-3. **WordPress Forum:** [Plugin Support Forum](https://wordpress.org/support/plugin/hold-this-product/)
-4. **GitHub Issues:** [Report bugs](https://github.com/Flavius-Ciortan/HoldThisProduct/issues)
-
----
-
-## Feature Requests
-
-Have an idea? We'd love to hear it!
-
-- Submit on [GitHub](https://github.com/Flavius-Ciortan/HoldThisProduct/issues)
-- Include detailed use case
-- Explain expected behavior
-- Note any similar plugins/features
-
----
-
-## Version Information
-
-Current Version: 1.0.0
-Last Updated: November 12, 2025
-WordPress Compatibility: 5.8+
-WooCommerce Compatibility: 5.0+
-PHP Compatibility: 7.4+
-
----
-
-Thank you for using HoldThisProduct! We're committed to helping you provide the best reservation experience for your customers.
+Compatible add-ons should use the documented service and hook contracts in [`docs/EXTENSION_API.md`](docs/EXTENSION_API.md). They must not update canonical reservation meta or WooCommerce stock directly.

@@ -4,7 +4,7 @@
  * Plugin Name:       Hold This Product
  * Plugin URI:        https://github.com/Flavius-Ciortan/HoldThisProduct
  * Description:       Allows WooCommerce customers to reserve products for a limited time before purchase.
- * Version:           1.0.1
+ * Version:           1.1.0
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Define plugin constants
 define( 'HTP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'HTP_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
-define( 'HTP_VERSION', '1.0.1' );
+define( 'HTP_VERSION', '1.1.0' );
 
 /** Capability required to configure and operate reservations. */
 function htp_get_manage_capability() {

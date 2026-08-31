@@ -1,50 +1,54 @@
-# HoldThisProduct
+# Hold This Product
 
-**HoldThisProduct** is a WordPress plugin designed as an add-on for WooCommerce. It allows customers to **reserve a product for a limited period of time**, holding it for them before purchase. This feature is perfect for stores that want to let shoppers temporarily secure items without immediately completing the checkout process.
+Hold This Product is a WooCommerce extension that lets logged-in customers reserve eligible simple products for a limited time before purchasing them.
 
-## Features
+## Free Features
 
-- Seamless integration with WooCommerce
-- Reserve a product for a customizable time window
-- Prevents other customers from purchasing the reserved item during this period
-- Automatic release of reservation after the timer expires
-- Simple and intuitive interface for both store owners and customers
+- Immediate reservations or an optional merchant-approval workflow.
+- Transactional stock holds, releases, expiration, and checkout fulfillment.
+- Customer reservation management in My Account.
+- Merchant settings, reservation search and filtering, individual actions, and basic analytics.
+- Transactional email notifications through WordPress/WooCommerce mail delivery.
+- Configurable reservation limits, active and pending durations, and modal appearance.
+- Privacy export/erase integration, Shop Manager access, HPOS support, and Cart/Checkout Blocks support.
+- Stable extension hooks and service access for compatible add-ons.
+
+The supported Free scope is logged-in customers, one unit per reservation, simple products, and WooCommerce-managed stock.
 
 ## Requirements
 
-- WordPress 5.0 or higher
-- WooCommerce plugin installed and activated
-- PHP 7.4 or higher (PHP 8.x compatible)
+- WordPress 6.5 or newer.
+- WooCommerce 8.0 or newer.
+- PHP 7.4 or newer.
 
 ## Installation
 
-1. Ensure WooCommerce is installed and activated.
-2. Upload the `holdthisproduct` folder to the `/wp-content/plugins/` directory.
-3. Activate the plugin via the WordPress "Plugins" menu.
-4. Configure reservation time and other settings in the plugin options panel (found under WooCommerce settings).
+1. Install and activate WooCommerce.
+2. Upload the release ZIP through **Plugins > Add New > Upload Plugin**, or install the WordPress.org release.
+3. Activate **Hold This Product**.
+4. Open **Hold This Product > Settings** and enable reservations.
+5. Ensure each reservable product is a published simple product with WooCommerce stock management enabled and positive stock.
 
-## Usage
+SMTP is optional. The plugin uses the standard WordPress mail pipeline, so each merchant can choose whether their hosting mail service is sufficient or an SMTP provider/plugin is needed.
 
-- Customers can reserve available products directly on the product page.
-- Reserved products will be held for the specified time limit.
-- Once the reservation expires, the product becomes available to other customers.
-- Store admins can view and manage reservations from the WooCommerce admin panel.
+## Development
 
-## Contributing
+Install development dependencies with Composer, then run:
 
-We welcome contributions to HoldThisProduct!
+```bash
+vendor/bin/phpcs
+find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+```
 
-1. Fork this repository.
-2. Create a new feature branch: `git checkout -b feature/YourFeature`
-3. Commit your changes: `git commit -m 'Add YourFeature'`
-4. Push to the branch: `git push origin feature/YourFeature`
-5. Submit a pull request for review.
+The integration, concurrency, HPOS, lifecycle, and exact-artifact gates are defined in [`tests`](tests) and [`.github/workflows/quality.yml`](.github/workflows/quality.yml). Build a deterministic release ZIP with:
+
+```bash
+bash bin/build-release.sh
+```
+
+See [`docs/EXTENSION_API.md`](docs/EXTENSION_API.md) for supported add-on contracts and [`USER_GUIDE.md`](USER_GUIDE.md) for merchant usage.
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0**.  
-See the [LICENSE](LICENSE) file for full license terms.
-
----
-
-**Developed by [Flavius Ciortan](https://github.com/Flavius-Ciortan)**
+GPL-3.0-or-later. See [`LICENSE`](LICENSE).
