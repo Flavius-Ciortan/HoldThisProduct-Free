@@ -39,6 +39,8 @@ class HTP_Frontend {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
 		// Render next to the Add to cart button on single product pages.
 		add_action( 'woocommerce_after_add_to_cart_button', array( $this, 'display_reservation_form' ) );
+		// Sold-out products may not render an add-to-cart form; Pro waitlists use this fallback.
+		add_action( 'woocommerce_single_product_summary', array( $this, 'display_reservation_form' ), 31 );
 
 		// Render modal markup outside WooCommerce's form.cart to avoid nested <form> issues.
 		add_action( 'wp_footer', array( $this, 'display_reservation_modal' ) );

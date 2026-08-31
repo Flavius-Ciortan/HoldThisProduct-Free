@@ -32,6 +32,7 @@ htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_
 htp_assert( $htp_plugin->get_service( 'lifecycle' ) instanceof HTP_Reservation_Lifecycle_Interface, 'Lifecycle implements its extension contract.' );
 htp_assert( $htp_plugin->get_service( 'rules' ) instanceof HTP_Reservation_Rules, 'Reservation rules service is registered.' );
 htp_assert( $htp_plugin->get_service( 'locks' ) instanceof HTP_Lock_Manager, 'Reservation lock service is registered.' );
+htp_assert( false !== has_action( 'woocommerce_single_product_summary', array( $htp_plugin->frontend, 'display_reservation_form' ) ), 'Frontend has a deduplicated sold-out product fallback for add-on waitlists.' );
 $htp_dependency_notices = $htp_plugin->get_service( 'dependency_notices' );
 htp_assert( $htp_dependency_notices instanceof HTP_Dependency_Notices, 'Add-on dependency notice service is registered.' );
 htp_assert( $htp_dependency_notices->add( 'htp-contract-test', 'Dependency contract test.', 'warning' ) && isset( $htp_dependency_notices->all()['htp-contract-test'] ), 'Add-ons can register a dependency notice through the shared contract.' );
