@@ -5,6 +5,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/includes/class-htp-reservation-status.php';
+require_once __DIR__ . '/includes/class-htp-reservation-meta.php';
+
 function hold_this_product_uninstall_site_data() {
 	do {
 		$ids = get_posts( array(
@@ -12,8 +15,8 @@ function hold_this_product_uninstall_site_data() {
 			'posts_per_page' => 200, 'no_found_rows' => true,
 		) );
 		foreach ( $ids as $reservation_id ) {
-			if ( 'active' === get_post_meta( $reservation_id, '_htp_status', true ) && function_exists( 'wc_update_product_stock' ) ) {
-				$product = wc_get_product( (int) get_post_meta( $reservation_id, '_htp_product_id', true ) );
+			if ( HTP_Reservation_Status::ACTIVE === HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS ) && function_exists( 'wc_update_product_stock' ) ) {
+				$product = wc_get_product( (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ) );
 				if ( $product ) {
 					wc_update_product_stock( $product, 1, 'increase' );
 				}

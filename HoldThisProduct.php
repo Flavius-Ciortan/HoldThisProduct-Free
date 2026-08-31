@@ -122,12 +122,19 @@ class HoldThisProduct {
     public function load_classes() {
         // Core classes
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-service-container.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-dependency-notices.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-meta.php';
+		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-repository.php';
+		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-lifecycle.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-rules.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-lock-manager.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-expiration-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-lifecycle.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-email-manager.php';
@@ -155,12 +162,16 @@ class HoldThisProduct {
         
         // Initialize core
 		$inventory     = $this->services->set( 'inventory', new HTP_Inventory_Manager() );
+		$this->services->set( 'dependency_notices', new HTP_Dependency_Notices() );
 		$repository    = $this->services->set( 'repository', new HTP_Reservation_Repository() );
 		$notifications = $this->services->set( 'notifications', new HTP_Notification_Dispatcher() );
 		$privacy       = $this->services->set( 'privacy', new HTP_Privacy_Service() );
+		$rules         = $this->services->set( 'rules', new HTP_Reservation_Rules() );
+		$locks         = $this->services->set( 'locks', new HTP_Lock_Manager() );
 		$cart_order    = $this->services->set( 'cart_order', new HTP_Cart_Order_Service( $inventory, $repository ) );
 		$expiration    = $this->services->set( 'expiration', new HTP_Expiration_Service( $inventory, $notifications, $cart_order ) );
-        $this->reservations = $this->services->set( 'reservations', new HTP_Reservations( $inventory, $notifications, $privacy, $repository, $cart_order, $expiration ) );
+		$lifecycle     = $this->services->set( 'lifecycle', new HTP_Reservation_Lifecycle( $inventory, $notifications, $repository, $cart_order, $rules, $locks ) );
+        $this->reservations = $this->services->set( 'reservations', new HTP_Reservations( $inventory, $notifications, $privacy, $repository, $cart_order, $expiration, $rules, $lifecycle ) );
         $this->services->set( 'email_manager', new HTP_Email_Manager() );
         
         // Initialize admin
@@ -192,12 +203,19 @@ class HoldThisProduct {
         
         // Load reservations class to register endpoints
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-service-container.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-dependency-notices.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-status.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-meta.php';
+		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-repository.php';
+		require_once HTP_PLUGIN_PATH . 'includes/interface-htp-reservation-lifecycle.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-repository.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-rules.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-lock-manager.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-inventory-manager.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-cart-order-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-expiration-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-notification-dispatcher.php';
+		require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservation-lifecycle.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-privacy-service.php';
         require_once HTP_PLUGIN_PATH . 'includes/class-htp-reservations.php';
         $reservations = new HTP_Reservations();
@@ -236,15 +254,15 @@ class HoldThisProduct {
 			'post_type' => 'htp_reservation', 'post_status' => 'publish', 'fields' => 'ids',
 			'posts_per_page' => 500, 'no_found_rows' => true,
 			'meta_query' => array(
-				array( 'key' => '_htp_expires_at', 'compare' => 'EXISTS' ),
-				array( 'key' => '_htp_timestamp_model', 'compare' => 'NOT EXISTS' ),
+				array( 'key' => HTP_Reservation_Meta::EXPIRES_AT, 'compare' => 'EXISTS' ),
+				array( 'key' => HTP_Reservation_Meta::TIMESTAMP_MODEL, 'compare' => 'NOT EXISTS' ),
 			),
 		) );
 		$offset = current_time( 'timestamp' ) - time();
 		foreach ( $ids as $reservation_id ) {
-			$expires = (int) get_post_meta( $reservation_id, '_htp_expires_at', true );
-			update_post_meta( $reservation_id, '_htp_expires_at', max( 0, $expires - $offset ) );
-			update_post_meta( $reservation_id, '_htp_timestamp_model', 'utc' );
+			$expires = (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT );
+			HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT, max( 0, $expires - $offset ) );
+			HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::TIMESTAMP_MODEL, 'utc' );
 		}
 		$this->reservations->schedule_expiration();
 		if ( count( $ids ) < 500 ) {

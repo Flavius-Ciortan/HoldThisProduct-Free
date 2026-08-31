@@ -600,9 +600,9 @@ class HTP_Admin {
             'post_status'    => 'publish',
             'posts_per_page' => 50,
             'meta_query'     => array(
-                array( 'key' => '_htp_status', 'value' => 'active' ),
-                array( 'key' => '_htp_product_id', 'value' => $product_id ),
-				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' )
+				array( 'key' => HTP_Reservation_Meta::STATUS, 'value' => HTP_Reservation_Status::ACTIVE ),
+				array( 'key' => HTP_Reservation_Meta::PRODUCT_ID, 'value' => $product_id ),
+				array( 'key' => HTP_Reservation_Meta::EXPIRES_AT, 'value' => time(), 'type' => 'NUMERIC', 'compare' => '>' )
             ),
             'orderby' => 'date',
             'order' => 'DESC'
@@ -613,10 +613,10 @@ class HTP_Admin {
      * Display single product reservation row
      */
     private function display_product_reservation_row( $reservation ) {
-        $email = get_post_meta( $reservation->ID, '_htp_email', true );
-        $name = get_post_meta( $reservation->ID, '_htp_name', true );
-        $surname = get_post_meta( $reservation->ID, '_htp_surname', true );
-        $expires_ts = (int) get_post_meta( $reservation->ID, '_htp_expires_at', true );
+		$email = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EMAIL );
+		$name = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::NAME );
+		$surname = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::SURNAME );
+		$expires_ts = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EXPIRES_AT );
         
         // Determine customer display name
         if ( $reservation->post_author ) {

@@ -35,7 +35,7 @@ class HTP_Admin_Reservations {
 		$search_type   = isset( $_GET['search_type'] ) ? sanitize_key( wp_unslash( $_GET['search_type'] ) ) : 'email';
 		$page          = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-		$status_filter = in_array( $status_filter, array( 'all', 'pending_approval', 'active', 'expired', 'cancelled', 'fulfilled', 'denied', 'order_cancelled' ), true ) ? $status_filter : 'all';
+		$status_filter = in_array( $status_filter, array_merge( array( 'all' ), HTP_Reservation_Status::all() ), true ) ? $status_filter : 'all';
 		$search_type = in_array( $search_type, array( 'email', 'product', 'product_id', 'customer_name' ), true ) ? $search_type : 'email';
 
 		$query = $this->get_filtered_reservations( $status_filter, $search_query, $search_type, $page );
@@ -47,13 +47,13 @@ class HTP_Admin_Reservations {
 
             <div class="htp-reservations-stats">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                    <div><strong>Pending Approval:</strong> <?php echo esc_html( $stats['pending_approval'] ); ?></div>
-                    <div><strong>Active:</strong> <?php echo esc_html( $stats['active'] ); ?></div>
-                    <div><strong>Expired:</strong> <?php echo esc_html( $stats['expired'] ); ?></div>
-                    <div><strong>Cancelled:</strong> <?php echo esc_html( $stats['cancelled'] ); ?></div>
-                    <div><strong>Fulfilled:</strong> <?php echo esc_html( $stats['fulfilled'] ); ?></div>
-                    <div><strong>Denied:</strong> <?php echo esc_html( $stats['denied'] ); ?></div>
-					<div><strong>Order Cancelled:</strong> <?php echo esc_html( $stats['order_cancelled'] ); ?></div>
+					<div><strong>Pending Approval:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::PENDING ] ); ?></div>
+					<div><strong>Active:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::ACTIVE ] ); ?></div>
+					<div><strong>Expired:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::EXPIRED ] ); ?></div>
+					<div><strong>Cancelled:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::CANCELLED ] ); ?></div>
+					<div><strong>Fulfilled:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::FULFILLED ] ); ?></div>
+					<div><strong>Denied:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::DENIED ] ); ?></div>
+					<div><strong>Order Cancelled:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::ORDER_CANCELLED ] ); ?></div>
                     <div><strong>Total:</strong> <?php echo esc_html( $stats['total'] ); ?></div>
                 </div>
             </div>
@@ -62,13 +62,9 @@ class HTP_Admin_Reservations {
                 <div class="alignleft actions">
                     <select name="status_filter" id="status-filter">
                         <option value="all" <?php selected( $status_filter, 'all' ); ?>><?php esc_html_e( 'All Statuses', 'hold-this-product' ); ?></option>
-                        <option value="pending_approval" <?php selected( $status_filter, 'pending_approval' ); ?>><?php esc_html_e( 'Pending Approval', 'hold-this-product' ); ?></option>
-                        <option value="active" <?php selected( $status_filter, 'active' ); ?>><?php esc_html_e( 'Active', 'hold-this-product' ); ?></option>
-                        <option value="expired" <?php selected( $status_filter, 'expired' ); ?>><?php esc_html_e( 'Expired', 'hold-this-product' ); ?></option>
-                        <option value="cancelled" <?php selected( $status_filter, 'cancelled' ); ?>><?php esc_html_e( 'Cancelled', 'hold-this-product' ); ?></option>
-                        <option value="fulfilled" <?php selected( $status_filter, 'fulfilled' ); ?>><?php esc_html_e( 'Fulfilled', 'hold-this-product' ); ?></option>
-                        <option value="denied" <?php selected( $status_filter, 'denied' ); ?>><?php esc_html_e( 'Denied', 'hold-this-product' ); ?></option>
-						<option value="order_cancelled" <?php selected( $status_filter, 'order_cancelled' ); ?>><?php esc_html_e( 'Order Cancelled', 'hold-this-product' ); ?></option>
+						<?php foreach ( HTP_Reservation_Status::labels() as $status_value => $status_label ) : ?>
+							<option value="<?php echo esc_attr( $status_value ); ?>" <?php selected( $status_filter, $status_value ); ?>><?php echo esc_html( $status_label ); ?></option>
+						<?php endforeach; ?>
                     </select>
 
                     <select name="search_type" id="search-type">
@@ -344,18 +340,21 @@ class HTP_Admin_Reservations {
             wp_send_json_error( 'Invalid reservation ID.' );
         }
 
-        $status = get_post_meta( $reservation_id, '_htp_status', true );
-        if ( $status !== 'active' ) {
+		$status = HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
+		if ( HTP_Reservation_Status::ACTIVE !== $status ) {
             wp_send_json_error( 'Reservation is not active.' );
         }
 
 			$result = $this->get_reservations_handler()->cancel_reservation( $reservation_id );
+			if ( is_wp_error( $result ) ) {
+				wp_send_json_error( $result->get_error_message() );
+			}
 			if ( ! $result ) {
 				wp_send_json_error( 'Reservation changed before it could be cancelled.' );
 			}
 
-		update_post_meta( $reservation_id, '_htp_cancelled_by_admin', time() );
-        update_post_meta( $reservation_id, '_htp_cancelled_by_user', get_current_user_id() );
+		HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::CANCELLED_BY_ADMIN, time() );
+		HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::CANCELLED_BY_USER, get_current_user_id() );
 
         wp_send_json_success( 'Reservation cancelled successfully.' );
     }
@@ -372,8 +371,8 @@ class HTP_Admin_Reservations {
             wp_send_json_error( 'Invalid reservation ID.' );
         }
 
-        $status = get_post_meta( $reservation_id, '_htp_status', true );
-        if ( $status === 'active' ) {
+		$status = HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
+		if ( HTP_Reservation_Status::ACTIVE === $status ) {
             wp_send_json_error( 'Cannot delete active reservations. Cancel them first.' );
         }
 
@@ -434,9 +433,11 @@ class HTP_Admin_Reservations {
 
 		$result = $this->get_reservations_handler()->deny_reservation( $reservation_id, $reason );
 
-        if ( $result ) {
-            wp_send_json_success( 'Reservation denied successfully.' );
-        }
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		} elseif ( $result ) {
+			wp_send_json_success( 'Reservation denied successfully.' );
+		}
 
         wp_send_json_error( 'Failed to deny reservation.' );
     }
@@ -450,7 +451,7 @@ class HTP_Admin_Reservations {
 
         if ( $status_filter !== 'all' ) {
             $meta_query[] = array(
-                'key'     => '_htp_status',
+				'key'     => HTP_Reservation_Meta::STATUS,
                 'value'   => $status_filter,
                 'compare' => '=',
             );
@@ -460,7 +461,7 @@ class HTP_Admin_Reservations {
             switch ( $search_type ) {
                 case 'email':
                     $meta_query[] = array(
-                        'key'     => '_htp_email',
+						'key'     => HTP_Reservation_Meta::EMAIL,
                         'value'   => $search_query,
                         'compare' => 'LIKE',
                     );
@@ -478,7 +479,7 @@ class HTP_Admin_Reservations {
                     }
 
                     $meta_query[] = array(
-                        'key'     => '_htp_product_id',
+						'key'     => HTP_Reservation_Meta::PRODUCT_ID,
                         'value'   => $product_ids,
                         'compare' => 'IN',
                     );
@@ -490,7 +491,7 @@ class HTP_Admin_Reservations {
 	                        break;
                     }
                     $meta_query[] = array(
-                        'key'     => '_htp_product_id',
+						'key'     => HTP_Reservation_Meta::PRODUCT_ID,
                         'value'   => absint( $search_query ),
                         'compare' => '=',
                     );
@@ -567,12 +568,12 @@ class HTP_Admin_Reservations {
             'meta_query'     => array(
                 'relation' => 'OR',
                 array(
-                    'key'     => '_htp_name',
+					'key'     => HTP_Reservation_Meta::NAME,
                     'value'   => $search_query,
                     'compare' => 'LIKE',
                 ),
                 array(
-                    'key'     => '_htp_surname',
+					'key'     => HTP_Reservation_Meta::SURNAME,
                     'value'   => $search_query,
                     'compare' => 'LIKE',
                 ),
@@ -589,12 +590,16 @@ class HTP_Admin_Reservations {
 		}
         global $wpdb;
 		$rows = $wpdb->get_results(
-			"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count
-			FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_htp_status'
-			WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
+			$wpdb->prepare(
+				"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count
+				FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
+				WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
+				HTP_Reservation_Meta::STATUS
+			),
 			OBJECT_K
-		); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- No external values are interpolated.
-			$summary = array( 'total' => 0, 'pending_approval' => 0, 'active' => 0, 'expired' => 0, 'cancelled' => 0, 'fulfilled' => 0, 'denied' => 0, 'order_cancelled' => 0 );
+		);
+		$summary = array_fill_keys( HTP_Reservation_Status::all(), 0 );
+		$summary['total'] = 0;
 		foreach ( (array) $rows as $status => $row ) {
 			if ( isset( $summary[ $status ] ) ) {
 				$summary[ $status ] = (int) $row->reservation_count;
@@ -606,12 +611,12 @@ class HTP_Admin_Reservations {
     }
 
     private function render_row( $reservation ) {
-        $product_id  = (int) get_post_meta( $reservation->ID, '_htp_product_id', true );
-        $email       = get_post_meta( $reservation->ID, '_htp_email', true );
-        $name        = get_post_meta( $reservation->ID, '_htp_name', true );
-        $surname     = get_post_meta( $reservation->ID, '_htp_surname', true );
-        $expires_ts  = (int) get_post_meta( $reservation->ID, '_htp_expires_at', true );
-        $status      = get_post_meta( $reservation->ID, '_htp_status', true );
+		$product_id  = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::PRODUCT_ID );
+		$email       = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EMAIL );
+		$name        = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::NAME );
+		$surname     = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::SURNAME );
+		$expires_ts  = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EXPIRES_AT );
+		$status      = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::STATUS );
 
         $product          = wc_get_product( $product_id );
         $product_name     = $product ? $product->get_name() : 'Unknown Product (ID: ' . $product_id . ')';
@@ -637,7 +642,7 @@ class HTP_Admin_Reservations {
 
         $time_left  = '—';
         $time_class = '';
-	        if ( $expires_ts && in_array( $status, array( 'active', 'pending_approval' ), true ) ) {
+		if ( $expires_ts && in_array( $status, HTP_Reservation_Status::open(), true ) ) {
 			$diff = $expires_ts - time();
             if ( $diff > 0 ) {
                 $days    = floor( $diff / DAY_IN_SECONDS );
@@ -681,7 +686,7 @@ class HTP_Admin_Reservations {
         echo '<td class="' . esc_attr( $time_class ) . '">' . esc_html( $time_left ) . '</td>';
         echo '<td>';
 
-        if ( $status === 'pending_approval' ) {
+		if ( HTP_Reservation_Status::PENDING === $status ) {
             echo '<button type="button" class="button button-small htp-approve-reservation" ';
             echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
             echo 'data-customer="' . esc_attr( $customer_short ) . '" ';
@@ -695,7 +700,7 @@ class HTP_Admin_Reservations {
             echo 'data-product="' . esc_attr( $product_name ) . '">';
             echo esc_html__( 'Deny', 'hold-this-product' );
             echo '</button>';
-        } elseif ( $status === 'active' ) {
+		} elseif ( HTP_Reservation_Status::ACTIVE === $status ) {
             echo '<button type="button" class="button button-small htp-cancel-reservation" ';
             echo 'data-reservation-id="' . esc_attr( $reservation->ID ) . '" ';
             echo 'data-customer="' . esc_attr( $customer_short ) . '" ';

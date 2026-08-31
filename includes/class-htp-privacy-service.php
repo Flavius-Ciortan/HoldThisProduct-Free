@@ -29,10 +29,10 @@ final class HTP_Privacy_Service {
 				'group_label' => __( 'Product reservations', 'hold-this-product' ),
 				'item_id'     => 'htp-reservation-' . $reservation_id,
 				'data'        => array(
-					array( 'name' => __( 'Product ID', 'hold-this-product' ), 'value' => (int) get_post_meta( $reservation_id, '_htp_product_id', true ) ),
-					array( 'name' => __( 'Status', 'hold-this-product' ), 'value' => sanitize_text_field( get_post_meta( $reservation_id, '_htp_status', true ) ) ),
-					array( 'name' => __( 'Email', 'hold-this-product' ), 'value' => sanitize_email( get_post_meta( $reservation_id, '_htp_email', true ) ) ),
-					array( 'name' => __( 'Expires', 'hold-this-product' ), 'value' => wp_date( DATE_ATOM, (int) get_post_meta( $reservation_id, '_htp_expires_at', true ) ) ),
+					array( 'name' => __( 'Product ID', 'hold-this-product' ), 'value' => (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ) ),
+					array( 'name' => __( 'Status', 'hold-this-product' ), 'value' => sanitize_text_field( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS ) ) ),
+					array( 'name' => __( 'Email', 'hold-this-product' ), 'value' => sanitize_email( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EMAIL ) ) ),
+					array( 'name' => __( 'Expires', 'hold-this-product' ), 'value' => wp_date( DATE_ATOM, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT ) ) ),
 				),
 			);
 		}
@@ -45,7 +45,7 @@ final class HTP_Privacy_Service {
 		$removed  = false;
 		$retained = $this->has_retained_reservations( $email_address );
 		foreach ( $ids as $reservation_id ) {
-			update_post_meta( $reservation_id, '_htp_email', wp_privacy_anonymize_data( 'email', $email_address ) );
+			HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::EMAIL, wp_privacy_anonymize_data( 'email', $email_address ) );
 			wp_update_post( array( 'ID' => $reservation_id, 'post_author' => 0 ) );
 			$removed = true;
 		}
@@ -62,7 +62,7 @@ final class HTP_Privacy_Service {
 		if ( $user ) {
 			return array( 'author' => $user->ID );
 		}
-		return array( 'meta_query' => array( array( 'key' => '_htp_email', 'value' => sanitize_email( $email_address ) ) ) );
+		return array( 'meta_query' => array( array( 'key' => HTP_Reservation_Meta::EMAIL, 'value' => sanitize_email( $email_address ) ) ) );
 	}
 
 	private function find_reservations( $email_address, $page ) {
@@ -83,7 +83,7 @@ final class HTP_Privacy_Service {
 			'order'          => 'ASC',
 			'no_found_rows'  => true,
 			'meta_query'     => array(
-				array( 'key' => '_htp_status', 'value' => HTP_Reservation_Status::open(), 'compare' => 'NOT IN' ),
+				array( 'key' => HTP_Reservation_Meta::STATUS, 'value' => HTP_Reservation_Status::open(), 'compare' => 'NOT IN' ),
 			),
 		);
 		return get_posts( $this->merge_identity_meta_query( $args, $email_address ) );
@@ -97,7 +97,7 @@ final class HTP_Privacy_Service {
 			'posts_per_page' => 1,
 			'no_found_rows'  => true,
 			'meta_query'     => array(
-				array( 'key' => '_htp_status', 'value' => HTP_Reservation_Status::open(), 'compare' => 'IN' ),
+				array( 'key' => HTP_Reservation_Meta::STATUS, 'value' => HTP_Reservation_Status::open(), 'compare' => 'IN' ),
 			),
 		);
 		return ! empty( get_posts( $this->merge_identity_meta_query( $args, $email_address ) ) );

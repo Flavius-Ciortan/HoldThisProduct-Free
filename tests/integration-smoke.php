@@ -28,6 +28,14 @@ htp_assert( $htp_plugin->reservations instanceof HTP_Reservations, 'Reservation 
 htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_Repository, 'Reservation repository is registered.' );
 htp_assert( $htp_plugin->get_service( 'cart_order' ) instanceof HTP_Cart_Order_Service, 'Cart and order service is registered.' );
 htp_assert( $htp_plugin->get_service( 'expiration' ) instanceof HTP_Expiration_Service, 'Expiration service is registered.' );
+htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_Repository_Interface, 'Repository implements its extension contract.' );
+htp_assert( $htp_plugin->get_service( 'lifecycle' ) instanceof HTP_Reservation_Lifecycle_Interface, 'Lifecycle implements its extension contract.' );
+htp_assert( $htp_plugin->get_service( 'rules' ) instanceof HTP_Reservation_Rules, 'Reservation rules service is registered.' );
+htp_assert( $htp_plugin->get_service( 'locks' ) instanceof HTP_Lock_Manager, 'Reservation lock service is registered.' );
+$htp_dependency_notices = $htp_plugin->get_service( 'dependency_notices' );
+htp_assert( $htp_dependency_notices instanceof HTP_Dependency_Notices, 'Add-on dependency notice service is registered.' );
+htp_assert( $htp_dependency_notices->add( 'htp-contract-test', 'Dependency contract test.', 'warning' ) && isset( $htp_dependency_notices->all()['htp-contract-test'] ), 'Add-ons can register a dependency notice through the shared contract.' );
+$htp_dependency_notices->remove( 'htp-contract-test' );
 htp_assert( post_type_exists( 'htp_reservation' ), 'Reservation post type is registered during normal bootstrap.' );
 
 wp_clear_scheduled_hook( HTP_Reservations::CRON_HOOK );
@@ -87,8 +95,22 @@ $htp_immediate_product->set_manage_stock( true );
 $htp_immediate_product->set_stock_quantity( 2 );
 $htp_immediate_product_id = $htp_immediate_product->save();
 update_option( 'holdthisproduct_options', array( 'enable_reservation' => 1, 'max_reservations' => 3, 'reservation_duration' => 24, 'pending_duration' => 1, 'require_admin_approval' => 0, 'enable_email_notifications' => 0 ) );
+$htp_eligibility_passthrough = static function ( $reservable ) {
+	return $reservable;
+};
+$htp_reservable_before_filter = $htp_plugin->reservations->is_product_reservable( $htp_immediate_product_id );
+add_filter( 'htp_product_is_reservable', $htp_eligibility_passthrough );
+htp_assert( $htp_reservable_before_filter === $htp_plugin->reservations->is_product_reservable( $htp_immediate_product_id ), 'A no-op eligibility extension does not change Free behavior.' );
+remove_filter( 'htp_product_is_reservable', $htp_eligibility_passthrough );
+$htp_transitions = array();
+$htp_transition_listener = static function ( $transition ) use ( &$htp_transitions ) {
+	$htp_transitions[] = $transition;
+};
+add_action( 'htp_reservation_transitioned', $htp_transition_listener );
 $htp_immediate_id = $htp_plugin->reservations->create_reservation( $htp_immediate_product_id, $htp_user_id );
 htp_assert( $htp_immediate_id && 'active' === get_post_meta( $htp_immediate_id, '_htp_status', true ), 'Immediate reservation activates through the inventory transaction.' );
+htp_assert( $htp_immediate_product_id === (int) HTP_Reservation_Meta::get( $htp_immediate_id, HTP_Reservation_Meta::PRODUCT_ID ), 'Canonical metadata accessor reads reservation product data.' );
+htp_assert( ! empty( $htp_transitions ) && HTP_Reservation_Status::ACTIVE === $htp_transitions[0]['to'], 'Lifecycle transition action receives a stable transition payload.' );
 htp_assert( HTP_Inventory_Manager::STATE_HELD === get_post_meta( $htp_immediate_id, HTP_Inventory_Manager::META_STATE, true ), 'Immediate reservation records held inventory ownership.' );
 htp_assert( 1 === (int) wc_get_product( $htp_immediate_product_id )->get_stock_quantity( 'edit' ), 'Immediate reservation decreases stock once.' );
 htp_assert( $htp_plugin->reservations->cancel_reservation( $htp_immediate_id ), 'Immediate reservation can be cancelled.' );
@@ -107,6 +129,17 @@ function htp_test_reservation( $product_id, $user_id, $status, $expires ) {
 }
 
 $htp_pending_id = htp_test_reservation( $htp_product_id, $htp_user_id, 'pending_approval', time() + HOUR_IN_SECONDS );
+$htp_vetoed_id = htp_test_reservation( $htp_product_id, $htp_user_id, 'pending_approval', time() + HOUR_IN_SECONDS );
+$htp_approval_veto = static function ( $allowed, $reservation_id, $from, $to, $source ) use ( $htp_vetoed_id ) {
+	return $htp_vetoed_id === $reservation_id && 'approve' === $source ? false : $allowed;
+};
+add_filter( 'htp_reservation_transition_allowed', $htp_approval_veto, 10, 5 );
+$htp_veto_result = $htp_plugin->reservations->approve_reservation( $htp_vetoed_id );
+htp_assert( is_wp_error( $htp_veto_result ) && HTP_Reservation_Status::PENDING === HTP_Reservation_Meta::get( $htp_vetoed_id, HTP_Reservation_Meta::STATUS ), 'Transition filters can safely veto approval before inventory changes.' );
+htp_assert( 1 === (int) wc_get_product( $htp_product_id )->get_stock_quantity( 'edit' ), 'A vetoed approval does not change stock.' );
+remove_filter( 'htp_reservation_transition_allowed', $htp_approval_veto, 10 );
+htp_assert( true === $htp_plugin->reservations->deny_reservation( $htp_vetoed_id, 'Contract test' ), 'Pending reservation denial uses the lifecycle service.' );
+htp_assert( HTP_Inventory_Manager::STATE_RELEASED === HTP_Reservation_Meta::get( $htp_vetoed_id, HTP_Reservation_Meta::INVENTORY_STATE ), 'Denial records terminal inventory ownership consistently.' );
 htp_assert( true === $htp_plugin->reservations->approve_reservation( $htp_pending_id ), 'Pending reservation approves.' );
 $htp_product = wc_get_product( $htp_product_id );
 htp_assert( 0 === (int) $htp_product->get_stock_quantity( 'edit' ), 'Approval holds physical stock once.' );
@@ -175,6 +208,7 @@ wp_delete_user( $htp_delete_user_id );
 htp_assert( 'htp_reservation' === get_post_type( $htp_delete_reservation_id ), 'Deleting a customer does not delete a reservation with an inventory obligation.' );
 
 wp_delete_post( $htp_pending_id, true );
+wp_delete_post( $htp_vetoed_id, true );
 wp_delete_post( $htp_expired_pending, true );
 wp_delete_post( $htp_active_id, true );
 wp_delete_post( $htp_immediate_id, true );
@@ -186,6 +220,7 @@ wp_delete_post( $htp_product_id, true );
 wp_delete_post( $htp_immediate_product_id, true );
 wp_delete_user( $htp_privacy_user_id );
 wp_delete_user( $htp_user_id );
+remove_action( 'htp_reservation_transitioned', $htp_transition_listener );
 if ( false === $htp_original_options ) {
 	delete_option( 'holdthisproduct_options' );
 } else {

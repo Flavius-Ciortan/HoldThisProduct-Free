@@ -47,8 +47,8 @@ final class HTP_Expiration_Service {
 			'posts_per_page' => 500,
 			'no_found_rows'  => true,
 			'meta_query' => array(
-				array( 'key' => '_htp_status', 'value' => HTP_Reservation_Status::open(), 'compare' => 'IN' ),
-				array( 'key' => '_htp_expires_at', 'value' => time(), 'type' => 'NUMERIC', 'compare' => '<=' ),
+				array( 'key' => HTP_Reservation_Meta::STATUS, 'value' => HTP_Reservation_Status::open(), 'compare' => 'IN' ),
+				array( 'key' => HTP_Reservation_Meta::EXPIRES_AT, 'value' => time(), 'type' => 'NUMERIC', 'compare' => '<=' ),
 			),
 		) );
 		foreach ( $ids as $reservation_id ) {
@@ -57,17 +57,17 @@ final class HTP_Expiration_Service {
 	}
 
 	public function expire_reservation( $reservation_id ) {
-		$previous_status = get_post_meta( $reservation_id, '_htp_status', true );
+		$previous_status = HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 		if ( ! in_array( $previous_status, HTP_Reservation_Status::open(), true ) ) {
 			return false;
 		}
-		$product = HTP_Reservation_Status::ACTIVE === $previous_status ? wc_get_product( (int) get_post_meta( $reservation_id, '_htp_product_id', true ) ) : null;
-		$result = $this->inventory->release( $reservation_id, $previous_status, HTP_Reservation_Status::EXPIRED, $product, (int) get_post_meta( $reservation_id, '_htp_qty', true ) );
+		$product = HTP_Reservation_Status::ACTIVE === $previous_status ? wc_get_product( (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ) ) : null;
+		$result = $this->inventory->release( $reservation_id, $previous_status, HTP_Reservation_Status::EXPIRED, $product, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::QUANTITY ), 'expire' );
 		if ( is_wp_error( $result ) ) {
 			return false;
 		}
-		update_post_meta( $reservation_id, '_htp_expired_from', $previous_status );
-		$email = get_post_meta( $reservation_id, '_htp_email', true );
+		HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::EXPIRED_FROM, $previous_status );
+		$email = HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EMAIL );
 		if ( $email ) {
 			$this->notifications->dispatch( 'expired', $reservation_id, $email );
 		}

@@ -42,18 +42,18 @@ if ( ! defined( 'ABSPATH' ) ) {
     <tbody>
         <?php foreach ( $reservations as $reservation ) : ?>
             <?php
-            $product_id = (int) get_post_meta( $reservation->ID, '_htp_product_id', true );
-            $status = (string) get_post_meta( $reservation->ID, '_htp_status', true );
-            $expires_ts = (int) get_post_meta( $reservation->ID, '_htp_expires_at', true );
+			$product_id = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::PRODUCT_ID );
+			$status = (string) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::STATUS );
+			$expires_ts = (int) HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EXPIRES_AT );
             $product = wc_get_product( $product_id );
             
             if ( ! $product ) {
                 continue;
             }
 
-            $is_pending = ( $status === 'pending_approval' );
-            $is_active  = ( $status === 'active' );
-            $is_expired = ( $status === 'expired' );
+			$is_pending = ( HTP_Reservation_Status::PENDING === $status );
+			$is_active  = ( HTP_Reservation_Status::ACTIVE === $status );
+			$is_expired = ( HTP_Reservation_Status::EXPIRED === $status );
 
 	            $expires_disp = ( ( $is_active || $is_pending || $is_expired ) && $expires_ts )
 				? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $expires_ts )
@@ -100,16 +100,16 @@ if ( ! defined( 'ABSPATH' ) ) {
             
 	            if ( $is_pending ) {
 	                $urgency_class = 'pending';
-            } elseif ( $status === 'fulfilled' ) {
+			} elseif ( HTP_Reservation_Status::FULFILLED === $status ) {
                 $time_left = esc_html__( 'Purchased', 'hold-this-product' );
                 $urgency_class = 'fulfilled';
-            } elseif ( $status === 'denied' ) {
+			} elseif ( HTP_Reservation_Status::DENIED === $status ) {
                 $time_left = esc_html__( 'Denied', 'hold-this-product' );
                 $urgency_class = 'denied';
-	            } elseif ( $status === 'cancelled' ) {
+				} elseif ( HTP_Reservation_Status::CANCELLED === $status ) {
 	                $time_left = esc_html__( 'Cancelled', 'hold-this-product' );
 	                $urgency_class = 'cancelled';
-	            } elseif ( $status === 'order_cancelled' ) {
+				} elseif ( HTP_Reservation_Status::ORDER_CANCELLED === $status ) {
 	                $time_left = esc_html__( 'Order cancelled', 'hold-this-product' );
 	                $urgency_class = 'cancelled';
             } elseif ( $is_expired ) {
@@ -120,35 +120,26 @@ if ( ! defined( 'ABSPATH' ) ) {
             $add_to_cart_url = esc_url( wc_get_cart_url() . '?add-to-cart=' . $product_id );
 			$cancel_nonce = wp_create_nonce( 'htp_cancel_res_' . $reservation->ID );
 
-            $status_map = array(
-                'active'           => esc_html__( 'Active', 'hold-this-product' ),
-                'pending_approval' => esc_html__( 'Pending approval', 'hold-this-product' ),
-                'fulfilled'        => esc_html__( 'Purchased', 'hold-this-product' ),
-                'expired'          => esc_html__( 'Expired', 'hold-this-product' ),
-                'cancelled'        => esc_html__( 'Cancelled', 'hold-this-product' ),
-	                'denied'           => esc_html__( 'Denied', 'hold-this-product' ),
-	                'order_cancelled'  => esc_html__( 'Order cancelled', 'hold-this-product' ),
-            );
-            $status_label = $status_map[ $status ] ?? esc_html__( 'Unknown', 'hold-this-product' );
+			$status_label = HTP_Reservation_Status::label( $status );
 
             switch ( $status ) {
-                case 'active':
+				case HTP_Reservation_Status::ACTIVE:
                     $badge_variant = 'active';
                     break;
-                case 'pending_approval':
+				case HTP_Reservation_Status::PENDING:
                     $badge_variant = 'pending';
                     break;
-                case 'fulfilled':
+				case HTP_Reservation_Status::FULFILLED:
                     $badge_variant = 'fulfilled';
                     break;
-                case 'denied':
+				case HTP_Reservation_Status::DENIED:
                     $badge_variant = 'denied';
                     break;
-	                case 'cancelled':
-	                case 'order_cancelled':
+					case HTP_Reservation_Status::CANCELLED:
+					case HTP_Reservation_Status::ORDER_CANCELLED:
                     $badge_variant = 'cancelled';
                     break;
-                case 'expired':
+				case HTP_Reservation_Status::EXPIRED:
                     $badge_variant = 'expired';
                     break;
                 default:

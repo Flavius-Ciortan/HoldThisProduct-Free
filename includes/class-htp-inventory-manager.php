@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * from being committed when its required stock operation fails.
  */
 final class HTP_Inventory_Manager {
-	const META_STATE = '_htp_inventory_state';
+	const META_STATE = HTP_Reservation_Meta::INVENTORY_STATE;
 
 	const STATE_NONE        = 'none';
 	const STATE_HELD        = 'held';
@@ -21,7 +21,7 @@ final class HTP_Inventory_Manager {
 		return update_post_meta( absint( $reservation_id ), self::META_STATE, sanitize_key( $state ) );
 	}
 
-	public function activate( $reservation_id, $from_status, $product, $quantity = 1, $meta_updates = array() ) {
+	public function activate( $reservation_id, $from_status, $product, $quantity = 1, $meta_updates = array(), $source = 'activate' ) {
 		return $this->transition(
 			$reservation_id,
 			$from_status,
@@ -31,14 +31,15 @@ final class HTP_Inventory_Manager {
 			'decrease',
 			self::STATE_NONE,
 			self::STATE_HELD,
-			$meta_updates
+			$meta_updates,
+			$source
 		);
 	}
 
-	public function release( $reservation_id, $from_status, $to_status, $product = null, $quantity = 1 ) {
+	public function release( $reservation_id, $from_status, $to_status, $product = null, $quantity = 1, $source = 'release' ) {
 		$state = $this->get_state( $reservation_id, $from_status );
 		if ( self::STATE_NONE === $state ) {
-			return $this->transition( $reservation_id, $from_status, $to_status, null, 0, '', self::STATE_NONE, self::STATE_RELEASED );
+			return $this->transition( $reservation_id, $from_status, $to_status, null, 0, '', self::STATE_NONE, self::STATE_RELEASED, array(), $source );
 		}
 
 		return $this->transition(
@@ -49,7 +50,9 @@ final class HTP_Inventory_Manager {
 			max( 1, absint( $quantity ) ),
 			'increase',
 			self::STATE_HELD,
-			self::STATE_RELEASED
+			self::STATE_RELEASED,
+			array(),
+			$source
 		);
 	}
 
@@ -64,7 +67,8 @@ final class HTP_Inventory_Manager {
 			$additional_quantity ? 'decrease' : '',
 			self::STATE_HELD,
 			self::STATE_TRANSFERRED,
-			array( '_htp_order_id' => absint( $order_id ) )
+			array( HTP_Reservation_Meta::ORDER_ID => absint( $order_id ) ),
+			'order_transfer'
 		);
 	}
 
@@ -79,7 +83,8 @@ final class HTP_Inventory_Manager {
 			$additional_quantity ? 'increase' : '',
 			self::STATE_TRANSFERRED,
 			self::STATE_HELD,
-			array( '_htp_order_id' => null )
+			array( HTP_Reservation_Meta::ORDER_ID => null ),
+			'order_transfer_rollback'
 		);
 	}
 
@@ -92,7 +97,9 @@ final class HTP_Inventory_Manager {
 			max( 1, absint( $quantity ) ),
 			'increase',
 			self::STATE_TRANSFERRED,
-			self::STATE_RELEASED
+			self::STATE_RELEASED,
+			array(),
+			'order_cancelled'
 		);
 	}
 
@@ -102,7 +109,7 @@ final class HTP_Inventory_Manager {
 			return $state;
 		}
 
-		$status = $status ?: (string) get_post_meta( absint( $reservation_id ), '_htp_status', true );
+		$status = $status ?: (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 		if ( HTP_Reservation_Status::ACTIVE === $status ) {
 			return self::STATE_HELD;
 		}
@@ -128,7 +135,7 @@ final class HTP_Inventory_Manager {
 			),
 		) );
 		foreach ( $ids as $reservation_id ) {
-			$status = (string) get_post_meta( $reservation_id, '_htp_status', true );
+			$status = (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 			add_post_meta( $reservation_id, self::META_STATE, $this->get_state( $reservation_id, $status ), true );
 		}
 		return count( $ids );
@@ -143,13 +150,13 @@ final class HTP_Inventory_Manager {
 			'posts_per_page' => max( 1, absint( $limit ) ),
 			'no_found_rows'  => true,
 			'meta_query'     => array(
-				array( 'key' => '_htp_status', 'compare' => 'EXISTS' ),
+				array( 'key' => HTP_Reservation_Meta::STATUS, 'compare' => 'EXISTS' ),
 				array( 'key' => self::META_STATE, 'compare' => 'EXISTS' ),
 			),
 		) );
 		$invalid = array();
 		foreach ( $ids as $reservation_id ) {
-			$status = (string) get_post_meta( $reservation_id, '_htp_status', true );
+			$status = (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 			$state  = (string) get_post_meta( $reservation_id, self::META_STATE, true );
 			if ( $state !== $this->expected_state( $status ) ) {
 				$invalid[] = (int) $reservation_id;
@@ -171,12 +178,15 @@ final class HTP_Inventory_Manager {
 		return self::STATE_RELEASED;
 	}
 
-	private function transition( $reservation_id, $from_status, $to_status, $product, $quantity, $stock_operation, $from_state, $to_state, $meta_updates = array() ) {
+	private function transition( $reservation_id, $from_status, $to_status, $product, $quantity, $stock_operation, $from_state, $to_state, $meta_updates = array(), $source = 'inventory' ) {
 		global $wpdb;
 
 		$reservation_id = absint( $reservation_id );
 		if ( ! $reservation_id || 'htp_reservation' !== get_post_type( $reservation_id ) || ! HTP_Reservation_Status::can_transition( $from_status, $to_status ) ) {
 			return new WP_Error( 'htp_invalid_inventory_transition', __( 'Invalid reservation inventory transition.', 'hold-this-product' ) );
+		}
+		if ( ! apply_filters( 'htp_reservation_transition_allowed', true, $reservation_id, $from_status, $to_status, sanitize_key( $source ) ) ) {
+			return new WP_Error( 'htp_transition_blocked', __( 'The reservation transition was blocked.', 'hold-this-product' ) );
 		}
 		if ( $stock_operation && ( ! $product instanceof WC_Product || ! $product->managing_stock() ) ) {
 			return new WP_Error( 'htp_invalid_inventory_product', __( 'Product stock is not available for this reservation transition.', 'hold-this-product' ) );
@@ -184,7 +194,7 @@ final class HTP_Inventory_Manager {
 
 		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		try {
-			$current_status = (string) get_post_meta( $reservation_id, '_htp_status', true );
+			$current_status = (string) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS );
 			$current_state  = $this->get_state( $reservation_id, $current_status );
 			if ( $current_status !== $from_status || $current_state !== $from_state ) {
 				throw new RuntimeException( __( 'Reservation changed during its inventory transition.', 'hold-this-product' ) );
@@ -193,7 +203,7 @@ final class HTP_Inventory_Manager {
 			if ( ! metadata_exists( 'post', $reservation_id, self::META_STATE ) ) {
 				add_post_meta( $reservation_id, self::META_STATE, $from_state, true );
 			}
-			if ( ! update_post_meta( $reservation_id, '_htp_status', $to_status, $from_status ) ) {
+			if ( ! HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::STATUS, $to_status, $from_status ) ) {
 				throw new RuntimeException( __( 'Reservation status could not be updated.', 'hold-this-product' ) );
 			}
 
@@ -229,6 +239,16 @@ final class HTP_Inventory_Manager {
 		}
 
 		clean_post_cache( $reservation_id );
+		do_action(
+			'htp_reservation_transitioned',
+			array(
+				'reservation_id' => $reservation_id,
+				'from'           => $from_status,
+				'to'             => $to_status,
+				'source'         => sanitize_key( $source ),
+				'occurred_at'    => time(),
+			)
+		);
 		return true;
 	}
 }

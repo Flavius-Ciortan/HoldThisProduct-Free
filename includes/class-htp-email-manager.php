@@ -25,7 +25,7 @@ class HTP_Email_Manager {
     }
 
     private function reservation_product( $reservation_id ) {
-        return wc_get_product( (int) get_post_meta( $reservation_id, '_htp_product_id', true ) );
+		return wc_get_product( (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ) );
     }
 
     private function send( $email, $subject, $message ) {
@@ -46,7 +46,7 @@ class HTP_Email_Manager {
         $product = $this->reservation_product( $reservation_id );
         if ( ! $product ) return;
         $name = wp_strip_all_tags( $product->get_name() );
-        $expires = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) get_post_meta( $reservation_id, '_htp_expires_at', true ) );
+		$expires = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT ) );
         $this->send(
             $email,
             /* translators: %s: product name. */
@@ -64,8 +64,8 @@ class HTP_Email_Manager {
         $product = $this->reservation_product( $reservation_id );
         if ( ! $product ) return;
 		$name = wp_strip_all_tags( $product->get_name() );
-		$expired_from = get_post_meta( $reservation_id, '_htp_expired_from', true );
-		$message = 'pending_approval' === $expired_from
+		$expired_from = HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRED_FROM );
+		$message = HTP_Reservation_Status::PENDING === $expired_from
 			/* translators: 1: product name, 2: product URL. */
 			? sprintf( __( "Hello,\n\nYour reservation request for %1\$s expired before it was approved.\n\nView Product: %2\$s", 'hold-this-product' ), $name, esc_url_raw( get_permalink( $product->get_id() ) ) )
 			/* translators: 1: product name, 2: product URL. */
@@ -97,7 +97,7 @@ class HTP_Email_Manager {
         $product = $this->reservation_product( $reservation_id );
         if ( ! $product ) return;
         $name = wp_strip_all_tags( $product->get_name() );
-        $expires = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) get_post_meta( $reservation_id, '_htp_expires_at', true ) );
+		$expires = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT ) );
         $this->send(
             $email,
             /* translators: %s: product name. */

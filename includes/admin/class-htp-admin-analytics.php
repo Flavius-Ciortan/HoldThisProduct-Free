@@ -136,15 +136,22 @@ class HTP_Analytics {
      */
     private function get_reservation_stats() {
         global $wpdb;
-		$rows = $wpdb->get_results( "SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_htp_status' WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value", OBJECT_K ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- No external values.
-			$stats = array( 'total' => 0, 'active' => 0, 'pending_approval' => 0, 'expired' => 0, 'fulfilled' => 0, 'cancelled' => 0, 'denied' => 0, 'order_cancelled' => 0 );
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT pm.meta_value AS reservation_status, COUNT(*) AS reservation_count FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s WHERE p.post_type = 'htp_reservation' AND p.post_status = 'publish' GROUP BY pm.meta_value",
+				HTP_Reservation_Meta::STATUS
+			),
+			OBJECT_K
+		);
+		$stats = array_fill_keys( HTP_Reservation_Status::all(), 0 );
+		$stats['total'] = 0;
 		foreach ( (array) $rows as $status => $row ) {
 			if ( isset( $stats[ $status ] ) ) {
 				$stats[ $status ] = (int) $row->reservation_count;
 				$stats['total'] += (int) $row->reservation_count;
 			}
 		}
-		$stats['conversion_rate'] = $stats['total'] ? round( ( $stats['fulfilled'] / $stats['total'] ) * 100, 1 ) : 0;
+		$stats['conversion_rate'] = $stats['total'] ? round( ( $stats[ HTP_Reservation_Status::FULFILLED ] / $stats['total'] ) * 100, 1 ) : 0;
 		return $stats;
     }
     
@@ -155,7 +162,7 @@ class HTP_Analytics {
         $reservations = get_posts( array(
             'post_type' => 'htp_reservation',
             'posts_per_page' => 20,
-            'meta_key' => '_htp_status',
+			'meta_key' => HTP_Reservation_Meta::STATUS,
             'orderby' => 'date',
             'order' => 'DESC'
         ) );
@@ -170,10 +177,10 @@ class HTP_Analytics {
         echo '<tbody>';
         
         foreach ( $reservations as $reservation ) {
-            $product_id = get_post_meta( $reservation->ID, '_htp_product_id', true );
-            $status = get_post_meta( $reservation->ID, '_htp_status', true );
-            $email = get_post_meta( $reservation->ID, '_htp_email', true );
-            $expires_ts = get_post_meta( $reservation->ID, '_htp_expires_at', true );
+			$product_id = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::PRODUCT_ID );
+			$status = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::STATUS );
+			$email = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EMAIL );
+			$expires_ts = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::EXPIRES_AT );
             
             $product = wc_get_product( $product_id );
 			$product_name = $product ? $product->get_name() : __( 'Unknown Product', 'hold-this-product' );
@@ -183,8 +190,8 @@ class HTP_Analytics {
                 $user = get_userdata( $reservation->post_author );
                 $customer = $user ? $user->display_name : $email;
             } else {
-                $name = get_post_meta( $reservation->ID, '_htp_name', true );
-                $surname = get_post_meta( $reservation->ID, '_htp_surname', true );
+				$name = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::NAME );
+				$surname = HTP_Reservation_Meta::get( $reservation->ID, HTP_Reservation_Meta::SURNAME );
                 $full_name = trim( $name . ' ' . $surname );
                 $customer = ! empty( $full_name ) ? $full_name : $email;
             }

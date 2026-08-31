@@ -15,17 +15,21 @@ class HTP_Reservations {
 	private $repository;
 	private $cart_order;
 	private $expiration;
+	private $rules;
+	private $lifecycle;
     
     /**
      * Constructor
      */
-	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null, $expiration = null ) {
+	    public function __construct( $inventory = null, $notifications = null, $privacy = null, $repository = null, $cart_order = null, $expiration = null, $rules = null, $lifecycle = null ) {
 			$this->inventory = $inventory instanceof HTP_Inventory_Manager ? $inventory : new HTP_Inventory_Manager();
 			$this->notifications = $notifications instanceof HTP_Notification_Dispatcher ? $notifications : new HTP_Notification_Dispatcher();
 			$this->privacy = $privacy instanceof HTP_Privacy_Service ? $privacy : new HTP_Privacy_Service();
 			$this->repository = $repository instanceof HTP_Reservation_Repository ? $repository : new HTP_Reservation_Repository();
 			$this->cart_order = $cart_order instanceof HTP_Cart_Order_Service ? $cart_order : new HTP_Cart_Order_Service( $this->inventory, $this->repository );
 			$this->expiration = $expiration instanceof HTP_Expiration_Service ? $expiration : new HTP_Expiration_Service( $this->inventory, $this->notifications, $this->cart_order );
+			$this->rules = $rules instanceof HTP_Reservation_Rules ? $rules : new HTP_Reservation_Rules();
+			$this->lifecycle = $lifecycle instanceof HTP_Reservation_Lifecycle_Interface ? $lifecycle : new HTP_Reservation_Lifecycle( $this->inventory, $this->notifications, $this->repository, $this->cart_order, $this->rules, new HTP_Lock_Manager() );
 	        $this->init();
     }
     
@@ -143,211 +147,48 @@ class HTP_Reservations {
         }
 
         $user_id = get_current_user_id();
-        $product = wc_get_product( $product_id );
-			if ( ! $product || ! $this->is_product_reservable( $product_id ) ) {
-			wp_send_json_error( __( 'Reservations are not available for this product.', 'hold-this-product' ), 400 );
-		}
-
-		$locks = $this->acquire_locks( array( 'product_' . $product_id, 'user_' . $user_id ) );
-		if ( is_wp_error( $locks ) ) {
-			wp_send_json_error( $locks->get_error_message(), 409 );
-		}
-
-		$result = null;
-		try {
-				$require_approval = $this->requires_approval( $product_id, $user_id );
-			$limit            = $this->get_max_reservations_per_user();
-			if ( $this->count_open_reservations( $user_id ) >= $limit ) {
-				/* translators: %d: maximum number of open reservations allowed. */
-				$result = new WP_Error( 'htp_limit', sprintf( __( 'You have reached the maximum of %d open reservations.', 'hold-this-product' ), $limit ) );
-			} elseif ( $this->user_has_open_reservation_for_product( $product_id, $user_id ) ) {
-				$result = new WP_Error( 'htp_duplicate', __( 'You already have a pending or active reservation for this product.', 'hold-this-product' ) );
-			} elseif ( (int) $product->get_stock_quantity( 'edit' ) < 1 ) {
-				$result = new WP_Error( 'htp_no_stock', __( 'No stock available.', 'hold-this-product' ) );
-			} else {
-				$reservation_id = $this->create_reservation( $product_id, $user_id );
-				$result = $reservation_id ? $reservation_id : new WP_Error( 'htp_create_failed', __( 'Could not create reservation.', 'hold-this-product' ) );
-			}
-		} finally {
-			$this->release_locks( $locks );
-		}
+		$result = $this->lifecycle->request( $product_id, $user_id );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message(), 400 );
 		}
-		$this->cart_order->clear_cache();
-		wp_send_json_success( $require_approval ? __( 'Reservation request submitted for approval.', 'hold-this-product' ) : __( 'Reservation created successfully.', 'hold-this-product' ) );
+		wp_send_json_success( $result['requires_approval'] ? __( 'Reservation request submitted for approval.', 'hold-this-product' ) : __( 'Reservation created successfully.', 'hold-this-product' ) );
     }
     
     /**
      * Create a new reservation
      */
     public function create_reservation( $product_id, $user_id = 0, $guest_email = '' ) {
-		unset( $guest_email );
-		$require_approval = $this->requires_approval( $product_id, $user_id );
-		$duration_hours = $this->get_duration_hours( $require_approval ? 'pending' : 'active', $product_id, $user_id );
-        $expires_at = time() + ( $duration_hours * HOUR_IN_SECONDS );
-        
-        $reservation_id = wp_insert_post( array(
-            'post_type'   => 'htp_reservation',
-            'post_title'  => 'Reservation for product ' . $product_id,
-            'post_status' => 'publish',
-            'post_author' => $user_id ?: 0,
-        ), true );
-        
-        if ( is_wp_error( $reservation_id ) ) {
-            return false;
-        }
-        
-		// Immediate holds use a private initializing state until status and stock
-		// ownership are committed by the inventory manager.
-		$initial_status = $require_approval ? HTP_Reservation_Status::PENDING : HTP_Reservation_Status::INITIALIZING;
-        
-        // Save meta data
-        $meta_data = array(
-            '_htp_product_id' => $product_id,
-            '_htp_status' => $initial_status,
-            '_htp_expires_at' => $expires_at,
-			'_htp_qty' => 1,
-			'_htp_timestamp_model' => 'utc',
-			HTP_Inventory_Manager::META_STATE => HTP_Inventory_Manager::STATE_NONE,
-        );
-        
-        // Get logged-in user's email for notifications
-        $notification_email = '';
-        if ( $user_id ) {
-            $user = get_userdata( $user_id );
-            if ( $user ) {
-                $notification_email = $user->user_email;
-                $meta_data['_htp_email'] = $notification_email;
-            }
-        }
-        
-		foreach ( $meta_data as $key => $value ) {
-			if ( false === update_post_meta( $reservation_id, $key, $value ) ) {
-				wp_delete_post( $reservation_id, true );
-				return false;
-			}
-		}
-
-		if ( ! $require_approval ) {
-			$product = wc_get_product( $product_id );
-			$activated = $this->inventory->activate( $reservation_id, HTP_Reservation_Status::INITIALIZING, $product, 1 );
-			if ( is_wp_error( $activated ) ) {
-				wp_delete_post( $reservation_id, true );
-				return false;
-			}
-		}
-        
-        // Trigger appropriate email notification
-        if ( $notification_email ) {
-            if ( $require_approval ) {
-	                $this->notifications->dispatch( 'pending', $reservation_id, $notification_email );
-	            } else {
-	                $this->notifications->dispatch( 'created', $reservation_id, $notification_email );
-            }
-        }
-        
-        return $reservation_id;
+		return $this->lifecycle->create( $product_id, $user_id, $guest_email );
     }
     
     /**
      * Check if product is reservable
      */
     public function is_product_reservable( $product_id ) {
-        if ( ! $this->are_reservations_globally_enabled() ) {
-            return false;
-        }
-        
-        // Require user to be logged in
-        if ( ! is_user_logged_in() ) {
-            return false;
-        }
-
-			$product = wc_get_product( absint( $product_id ) );
-			$reservable = $product instanceof WC_Product
-				&& $product->is_type( 'simple' )
-			&& $product->managing_stock()
-			&& $product->is_purchasable()
-			&& 'publish' === get_post_status( $product_id )
-				&& (int) $product->get_stock_quantity( 'edit' ) > 0;
-			return (bool) apply_filters( 'htp_product_is_reservable', $reservable, $product, get_current_user_id() );
+		return $this->rules->is_product_reservable( $product_id, get_current_user_id() );
     }
     
     /**
      * Check if reservations are globally enabled
      */
     public function are_reservations_globally_enabled() {
-        $options = get_option( 'holdthisproduct_options' );
-        return ! empty( $options['enable_reservation'] );
+		return $this->rules->are_reservations_globally_enabled();
     }
     
     /**
      * Get max reservations per user
      */
 	    public function get_max_reservations_per_user() {
-			$options = $this->get_options();
-			$limit = max( 1, min( 100, absint( $options['max_reservations'] ) ) );
-	        return max( 1, absint( apply_filters( 'htp_customer_reservation_limit', $limit, get_current_user_id() ) ) );
+		        return $this->rules->get_max_reservations_per_user( get_current_user_id() );
 	    }
 
 	public function requires_approval( $product_id, $user_id ) {
-		$options = $this->get_options();
-		$required = ! empty( $options['require_admin_approval'] );
-		return (bool) apply_filters( 'htp_reservation_requires_approval', $required, absint( $product_id ), absint( $user_id ) );
+		return $this->rules->requires_approval( $product_id, $user_id );
 	}
 
 	public function get_duration_hours( $context, $product_id = 0, $user_id = 0 ) {
-		$options = $this->get_options();
-		$context = 'pending' === $context ? 'pending' : 'active';
-		$option_key = 'pending' === $context ? 'pending_duration' : 'reservation_duration';
-		$duration = max( 1, min( 168, absint( $options[ $option_key ] ) ) );
-		return max( 1, absint( apply_filters( 'htp_reservation_duration_hours', $duration, $context, absint( $product_id ), absint( $user_id ) ) ) );
-	}
-
-	private function get_options() {
-		$options = get_option( 'holdthisproduct_options', array() );
-		$options = is_array( $options ) ? $options : array();
-		return wp_parse_args(
-			$options,
-			array(
-				'enable_reservation'         => 0,
-				'max_reservations'           => 1,
-				'reservation_duration'       => 24,
-				'pending_duration'           => 24,
-				'require_admin_approval'     => 0,
-				'enable_email_notifications' => 0,
-			)
-		);
-	}
-
-	private function acquire_locks( $names ) {
-		$locks = array();
-		sort( $names, SORT_STRING );
-		foreach ( array_unique( $names ) as $name ) {
-			$key   = 'htp_lock_' . sanitize_key( $name );
-			$token = wp_generate_uuid4() . '|' . time();
-			if ( ! add_option( $key, $token, '', false ) ) {
-				$parts = explode( '|', (string) get_option( $key, '' ) );
-				if ( isset( $parts[1] ) && time() - (int) $parts[1] > 30 ) {
-					delete_option( $key );
-				}
-				if ( ! add_option( $key, $token, '', false ) ) {
-					$this->release_locks( $locks );
-					return new WP_Error( 'htp_busy', __( 'Another reservation is being processed. Please try again.', 'hold-this-product' ) );
-				}
-			}
-			$locks[ $key ] = $token;
-		}
-		return $locks;
-	}
-
-	private function release_locks( $locks ) {
-		foreach ( (array) $locks as $key => $token ) {
-			if ( hash_equals( (string) get_option( $key, '' ), (string) $token ) ) {
-				delete_option( $key );
-			}
-		}
+		return $this->rules->get_duration_hours( $context, $product_id, $user_id );
 	}
     
     /**
@@ -382,17 +223,7 @@ class HTP_Reservations {
      * Cancel a reservation
      */
 	public function cancel_reservation( $reservation_id ) {
-		$previous_status = get_post_meta( $reservation_id, '_htp_status', true );
-		if ( ! in_array( $previous_status, HTP_Reservation_Status::open(), true ) ) {
-			return false;
-		}
-		$product = HTP_Reservation_Status::ACTIVE === $previous_status ? wc_get_product( (int) get_post_meta( $reservation_id, '_htp_product_id', true ) ) : null;
-		$result = $this->inventory->release( $reservation_id, $previous_status, HTP_Reservation_Status::CANCELLED, $product, (int) get_post_meta( $reservation_id, '_htp_qty', true ) );
-		if ( is_wp_error( $result ) ) {
-			return false;
-		}
-		$this->cart_order->clear_cache();
-		return true;
+		return $this->lifecycle->cancel( $reservation_id );
     }
     
     /**
@@ -462,7 +293,7 @@ class HTP_Reservations {
 			'paged'          => $current_page,
             'meta_query'     => array(
                 array(
-                    'key'     => '_htp_status',
+					'key'     => HTP_Reservation_Meta::STATUS,
                     'compare' => 'EXISTS',
                 ),
             ),
@@ -570,88 +401,14 @@ class HTP_Reservations {
      * Approve a pending reservation
      */
     public function approve_reservation( $reservation_id ) {
-		if ( 'htp_reservation' !== get_post_type( $reservation_id ) ) {
-			return new WP_Error( 'htp_invalid_reservation', __( 'Invalid reservation.', 'hold-this-product' ) );
-		}
-		$product_id = (int) get_post_meta( $reservation_id, '_htp_product_id', true );
-		$user_id    = (int) get_post_field( 'post_author', $reservation_id );
-		$locks      = $this->acquire_locks( array( 'product_' . $product_id, 'user_' . $user_id ) );
-		if ( is_wp_error( $locks ) ) {
-			return $locks;
-		}
-
-		try {
-			if ( 'pending_approval' !== get_post_meta( $reservation_id, '_htp_status', true ) ) {
-				return new WP_Error( 'htp_not_pending', __( 'Reservation is not pending approval.', 'hold-this-product' ) );
-			}
-        if ( ! $product_id ) {
-				return new WP_Error( 'htp_missing_product', __( 'Reservation is missing product data.', 'hold-this-product' ) );
-        }
-
-        $product = wc_get_product( $product_id );
-			if ( ! $product || ! $product->is_type( 'simple' ) || ! $product->managing_stock() ) {
-				return new WP_Error( 'htp_stock_unmanaged', __( 'Product stock is not managed.', 'hold-this-product' ) );
-        }
-
-			$stock_quantity = (int) $product->get_stock_quantity( 'edit' );
-        if ( $stock_quantity <= 0 ) {
-				return new WP_Error( 'htp_no_stock', __( 'No stock available to approve this reservation.', 'hold-this-product' ) );
-        }
-
-			$options = $this->get_options();
-			$duration_hours = $this->get_duration_hours( 'active', $product_id, $user_id );
-			$expires_at = time() + ( $duration_hours * HOUR_IN_SECONDS );
-			$activation = $this->inventory->activate(
-				$reservation_id,
-				HTP_Reservation_Status::PENDING,
-				$product,
-				(int) get_post_meta( $reservation_id, '_htp_qty', true ),
-				array( '_htp_expires_at' => $expires_at )
-			);
-			if ( is_wp_error( $activation ) ) {
-				return $activation;
-			}
-		} finally {
-			$this->release_locks( $locks );
-		}
-        
-        // Send confirmation email
-        $email = get_post_meta( $reservation_id, '_htp_email', true );
-        if ( $email ) {
-	            $this->notifications->dispatch( 'approved', $reservation_id, $email );
-        }
-        
-		$this->cart_order->clear_cache();
-		return true;
+		return $this->lifecycle->approve( $reservation_id );
     }
     
     /**
      * Deny a pending reservation
      */
     public function deny_reservation( $reservation_id, $reason = '' ) {
-        $current_status = get_post_meta( $reservation_id, '_htp_status', true );
-        
-		if ( 'htp_reservation' !== get_post_type( $reservation_id ) || $current_status !== 'pending_approval' ) {
-            return false;
-        }
-        
-        // Update status to denied
-		if ( ! update_post_meta( $reservation_id, '_htp_status', 'denied', 'pending_approval' ) ) {
-			return false;
-		}
-        
-        // Store denial reason if provided
-        if ( $reason ) {
-            update_post_meta( $reservation_id, '_htp_denial_reason', sanitize_text_field( $reason ) );
-        }
-        
-        // Send denial email
-        $email = get_post_meta( $reservation_id, '_htp_email', true );
-        if ( $email ) {
-	            $this->notifications->dispatch( 'denied', $reservation_id, $email, array( 'reason' => $reason ) );
-        }
-        
-        return true;
+		return $this->lifecycle->deny( $reservation_id, $reason );
     }
 
     /**
