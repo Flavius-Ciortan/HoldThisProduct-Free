@@ -34,12 +34,12 @@ This project adheres to a code of conduct. By participating, you are expected to
 
 2. **Setup:**
    ```bash
-   git clone https://github.com/Flavius-Ciortan/HoldThisProduct.git
-   cd HoldThisProduct
+   git clone https://github.com/Flavius-Ciortan/HoldThisProduct-Free.git hold-this-product
+   cd hold-this-product
    ```
 
 3. **Install in WordPress:**
-   - Copy plugin to `wp-content/plugins/HoldThisProduct`
+   - Copy plugin to `wp-content/plugins/hold-this-product`
    - Activate in WordPress admin
    - Enable WooCommerce
 
@@ -256,7 +256,7 @@ Mockups, examples, similar plugins, etc.
 ### File Structure
 
 ```
-HoldThisProduct/
+hold-this-product/
 ├── assets/
 │   ├── css/
 │   ├── js/
