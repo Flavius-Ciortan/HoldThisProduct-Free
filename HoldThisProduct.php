@@ -292,6 +292,10 @@ class HoldThisProduct {
 	}
 
 	public function add_privacy_policy_content() {
+		if ( ! is_admin() ) {
+			return;
+		}
+
 		if ( function_exists( 'wp_add_privacy_policy_content' ) ) {
 			wp_add_privacy_policy_content(
 				__( 'Hold This Product', 'hold-this-product' ),

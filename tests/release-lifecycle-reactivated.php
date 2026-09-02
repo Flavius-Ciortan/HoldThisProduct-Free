@@ -27,7 +27,9 @@ $legacy_expires = time() + HOUR_IN_SECONDS + $offset;
 update_post_meta( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT, $legacy_expires );
 delete_post_meta( $reservation_id, HTP_Reservation_Meta::TIMESTAMP_MODEL );
 update_option( 'htp_version', '1.0.0', false );
-do_action( 'admin_init' );
+// Replaying global admin hooks in WP-CLI also re-runs unrelated plugin callbacks.
+$plugin->maybe_upgrade();
+$plugin->maybe_migrate_inventory_states();
 
 $migrated_expires = (int) get_post_meta( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT, true );
 $migration_valid  = 'utc' === get_post_meta( $reservation_id, HTP_Reservation_Meta::TIMESTAMP_MODEL, true )

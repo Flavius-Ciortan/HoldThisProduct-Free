@@ -41,7 +41,11 @@ class HTP_Reservations {
 	private function init() {
 		add_action( 'init', array( $this, 'register_post_type' ) );
 		add_action( 'init', array( $this, 'register_endpoints' ) );
-		add_filter( 'cron_schedules', array( $this, 'add_cron_schedule' ) );
+		if ( did_action( 'init' ) ) {
+			$this->register_cron_schedule();
+		} else {
+			add_action( 'init', array( $this, 'register_cron_schedule' ), 5 );
+		}
 		add_action( self::CRON_HOOK, array( $this, 'expire_old_reservations' ) );
 		add_action( 'init', array( $this, 'schedule_expiration' ), 20 );
 
@@ -74,6 +78,10 @@ class HTP_Reservations {
 		add_filter( 'wp_privacy_personal_data_exporters', array( $this, 'register_privacy_exporter' ) );
 		add_filter( 'wp_privacy_personal_data_erasers', array( $this, 'register_privacy_eraser' ) );
 		add_filter( 'site_status_tests', array( $this, 'register_site_health_tests' ) );
+	}
+
+	public function register_cron_schedule() {
+		add_filter( 'cron_schedules', array( $this, 'add_cron_schedule' ) );
 	}
 
 	public function add_cron_schedule( $schedules ) {
