@@ -1,5 +1,4 @@
 === Hold This Product ===
-Contributors: flaviusciortan
 Tags: woocommerce, reservation, product hold, stock management, inventory
 Requires at least: 6.5
 Tested up to: 7.1
@@ -39,6 +38,14 @@ Hold This Product adds a complete reservation workflow for WooCommerce stores th
 An immediate reservation reduces stock once. When approval is required, the request remains pending without changing stock; approval starts the active hold and its duration. Cancellation or expiration releases held stock once. Checkout transfers the held unit to the order without a second stock decrement. Qualifying cancelled orders restore the unit once.
 
 The Free edition supports logged-in customers, simple products with WooCommerce stock management enabled, and one unit per reservation.
+
+= Privacy and external services =
+
+Reservation records are stored only in this website's WordPress database. Hold This Product does not send reservation data, telemetry, or usage analytics to the plugin authors or any service selected by the plugin.
+
+If email notifications are enabled, reservation details are passed to the mail delivery system configured by the site owner. That system may be the web host, an SMTP plugin, or another third-party provider and is governed by the site owner's provider terms.
+
+Reservation records remain in the database until the plugin is uninstalled. For closed reservations, WordPress erasure anonymizes the customer identity and free-text denial details while retaining operational reservation, order, and inventory data. Open reservations are retained until their inventory obligation ends; the customer can submit another erasure request after the reservation closes.
 
 == Installation ==
 
@@ -85,21 +92,15 @@ Yes. Reservation settings and operations use WooCommerce's management capability
 
 = What data does the plugin store? =
 
-Reservation records contain the customer, product, status, timestamps, email, quantity, inventory state, and linked order where applicable. The plugin integrates with WordPress personal-data export and erasure tools.
+Reservation records can contain the customer user ID, first and last name, email address, product ID, quantity, status, creation and expiry times, inventory state, denial details, and a related order ID. The plugin integrates with WordPress personal-data export and erasure tools.
 
-== Screenshots ==
+= Does the plugin use an external service or track usage? =
 
-1. Reservation settings and approval controls
-2. Eligible product with the Reserve Product button
-3. Accessible reservation confirmation modal
-4. Customer reservations in My Account
-5. Merchant reservation management and filters
-6. Product inventory panel with active reservations
-7. Basic reservation analytics
+No. The plugin has no author-operated service, telemetry, tracking, advertisements, or remote account requirement. Email is handed to the mail system selected and configured by the site owner.
 
 == Changelog ==
 
-= 1.1.0 - 2026-08-31 =
+= 1.1.0 - 2026-09-03 =
 
 * Reworked lifecycle and inventory ownership into transactional, idempotent services
 * Added safe cart-before-reservation linkage and checkout fulfillment without double stock reduction
@@ -108,6 +109,8 @@ Reservation records contain the customer, product, status, timestamps, email, qu
 * Added stable service, rule, lifecycle, and notification extension contracts
 * Added HPOS, classic checkout, block checkout, accessibility, role, lifecycle, and exact-artifact verification
 * Added deterministic release packaging, WordPress coding standards, Plugin Check, and CI quality gates
+* Expanded privacy exports and removed customer names and free-text denial details during erasure
+* Prepared canonical licensing, repository links, and WordPress.org submission documentation
 
 = 1.0.1 - 2026-07-28 =
 
@@ -126,4 +129,4 @@ Recommended reliability update for reservation lifecycle, inventory ownership, c
 
 == Support ==
 
-Use the WordPress.org support forum or the GitHub issue tracker at https://github.com/Flavius-Ciortan/HoldThisProduct.
+Use the plugin's WordPress.org support forum.

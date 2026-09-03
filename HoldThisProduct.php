@@ -2,7 +2,6 @@
 
 /**
  * Plugin Name:       Hold This Product
- * Plugin URI:        https://github.com/Flavius-Ciortan/HoldThisProduct
  * Description:       Allows WooCommerce customers to reserve products for a limited time before purchase.
  * Version:           1.1.0
  * Requires at least: 6.5
@@ -10,10 +9,10 @@
  * Requires Plugins:  woocommerce
  * WC requires at least: 8.0
  * WC tested up to:   11.0
- * Author:            Flavius Ciortan, Anghel Emanuel.
- * Author URI:        https://github.com/Flavius-Ciortan
+ * Author:            Hold This Product Team
  * Text Domain:       hold-this-product
- * License:           GPLv3
+ * Domain Path:       /languages
+ * License:           GPL v3 or later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  */
 
@@ -297,10 +296,10 @@ class HoldThisProduct {
 		}
 
 		if ( function_exists( 'wp_add_privacy_policy_content' ) ) {
-			wp_add_privacy_policy_content(
-				__( 'Hold This Product', 'hold-this-product' ),
-				wp_kses_post( '<p>' . __( 'This plugin stores the customer user ID, email address, product ID, reservation status, expiry time, and related order ID to manage product reservations. Reservation data can be exported and erased with the WordPress privacy tools. Open reservations are retained until their inventory obligation ends.', 'hold-this-product' ) . '</p>' )
-			);
+			$content  = '<p>' . esc_html__( 'Hold This Product stores reservation records on this website. These records can include the customer user ID, first and last name, email address, product ID, quantity, reservation status, creation and expiry times, inventory state, denial details, and a related WooCommerce order ID.', 'hold-this-product' ) . '</p>';
+			$content .= '<p>' . esc_html__( 'Reservation data is not sent to Hold This Product or any other service by the plugin. When email notifications are enabled, reservation details are passed to the mail delivery system configured for this WordPress website, which may be operated by a third party selected by the site owner.', 'hold-this-product' ) . '</p>';
+			$content .= '<p>' . esc_html__( 'Reservation records remain in the website database until the plugin is uninstalled. For closed reservations, the WordPress personal data eraser anonymizes the customer identity and free-text denial details while retaining the operational reservation, order, and inventory data. Open reservations are retained during erasure until their inventory obligation ends; the customer can submit another erasure request after the reservation closes.', 'hold-this-product' ) . '</p>';
+			wp_add_privacy_policy_content( __( 'Hold This Product', 'hold-this-product' ), wp_kses_post( $content ) );
 		}
 	}
 }

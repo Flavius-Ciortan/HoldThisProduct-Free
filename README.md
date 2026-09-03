@@ -31,6 +31,12 @@ The supported Free scope is logged-in customers, one unit per reservation, simpl
 
 SMTP is optional. The plugin uses the standard WordPress mail pipeline, so each merchant can choose whether their hosting mail service is sufficient or an SMTP provider/plugin is needed.
 
+## Data and Privacy
+
+Reservation records are stored in the site's WordPress database. The plugin does not send data or telemetry to the authors and does not require an external account. If email notifications are enabled, WordPress passes the message to the delivery system selected by the site owner.
+
+The plugin registers with the WordPress personal-data exporter and eraser. Erasure anonymizes closed records while retaining operational order and inventory data; open reservations remain identifiable until their inventory obligation ends. Uninstall removes reservation records. See [`USER_GUIDE.md`](USER_GUIDE.md) for the complete behavior.
+
 ## Development
 
 Install development dependencies with Composer, then run:
@@ -52,3 +58,7 @@ See [`docs/EXTENSION_API.md`](docs/EXTENSION_API.md) for supported add-on contra
 ## License
 
 GPL-3.0-or-later. See [`LICENSE`](LICENSE).
+
+## Support and Security
+
+Use the repository issue tracker for reproducible bugs and feature requests. Report security vulnerabilities privately through the repository's Security tab.

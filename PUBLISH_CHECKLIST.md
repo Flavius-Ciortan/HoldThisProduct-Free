@@ -1,79 +1,122 @@
-# Hold This Product Release Checklist
+# WordPress.org Submission and Release Checklist
 
-Use this checklist for the 1.1.0 Free maintenance release and subsequent releases.
+This checklist applies to Hold This Product Free 1.1.0.
 
-## Version and Metadata
+## Submission Package
 
-- [x] Plugin header and `HTP_VERSION` match.
-- [x] `readme.txt` stable tag matches the plugin version.
-- [x] Minimum WordPress, WooCommerce, and PHP requirements match the CI matrix.
-- [x] `README.md`, `USER_GUIDE.md`, `CHANGELOG.md`, and extension API describe implemented behavior only.
-- [x] WordPress `Tested up to` is set to the verified current release.
-- [ ] Confirm release date and final tag immediately before publishing.
+- Plugin name: Hold This Product
+- Requested directory slug: `hold-this-product`
+- Main plugin file: `HoldThisProduct.php`
+- Public source repository: the standalone Free repository
+- License: GPL-3.0-or-later
+- Minimum WordPress: 6.5
+- Tested WordPress: 7.1
+- Minimum PHP: 7.4
+- Required plugin: WooCommerce
+- Minimum WooCommerce: 8.0
+- Tested WooCommerce: 11.0
+- Release version and stable tag: 1.1.0
 
-## Static Quality
+The final slug is assigned by the WordPress.org Plugin Review team. An exact directory page did not exist when checked on 2026-09-03, but this does not reserve or guarantee the requested slug.
 
-- [x] All PHP files pass `php -l`.
-- [x] Production JavaScript passes `node --check`.
-- [x] Production PHP passes WordPress Coding Standards and PHP compatibility rules.
-- [x] Composer metadata validates in the CI environment.
-- [x] No debug output, secrets, local credentials, or implementation plans are packaged.
-- [x] Plugin Check runs against the exact release ZIP.
-- [x] Remaining Plugin Check findings are advisory post-meta query warnings from the current CPT repository.
+## Account Prerequisites
 
-## Automated Behavior
+- [ ] Create or verify the WordPress.org account that will submit and maintain the plugin.
+- [ ] Decide whether to list any WordPress.org account IDs in a future `Contributors:` field. The field is intentionally omitted from this release metadata.
+- [ ] Use a monitored email address on the WordPress.org account.
+- [ ] Allow email from `plugins@wordpress.org` so review messages are not lost.
+- [ ] Ensure every person named as a contributor has approved the GPL-3.0-or-later distribution terms.
 
-- [x] Immediate, pending, approve, deny, cancel, expire, fulfill, and order-cancelled paths pass.
-- [x] Every stock-changing transition is idempotent.
-- [x] Last-unit concurrency permits one hold and rejects the competing request.
-- [x] Cart-before-reservation and reservation-before-cart linkage pass.
-- [x] Privacy batching does not skip records.
-- [x] Customer deletion preserves unresolved inventory obligations.
-- [x] Missing expiration scheduling self-heals.
-- [x] Activation, deactivation, upgrade migration, uninstall, and reactivation pass.
-- [x] Uninstall restores only inventory still owned by an active hold.
+Only WordPress.org account IDs belong in `Contributors:`. Repository usernames and display names are not interchangeable with WordPress.org IDs. WordPress.org can still publicly associate the submitting account with the plugin even when this field is omitted.
 
-## Compatibility Matrix
+## Reviewer Overview
 
-- [x] PHP 7.4 with WordPress 6.5 and WooCommerce 8.0 is in CI.
-- [x] Current PHP, WordPress, and WooCommerce are in CI.
-- [x] HPOS enabled and legacy order storage both pass.
-- [x] Classic checkout and Checkout Blocks pass against an installed release ZIP.
-- [x] Administrator and Shop Manager access pass.
-- [x] The frontend modal passes keyboard Escape, focus restoration, focus containment, live notice, and reduced-motion checks.
-- [ ] Review CI results for the final release commit.
+Use this concise description in the submission form:
 
-## Exact Artifact
+> Hold This Product adds timed product reservations for logged-in WooCommerce customers. It supports immediate or merchant-approved reservations, transactional stock holds and releases, customer and merchant cancellation, expiration through WP-Cron, checkout fulfillment without a second stock reduction, My Account management, email notifications, privacy export/erasure, basic analytics, HPOS, and Cart/Checkout Blocks. Free supports one unit per reservation for published simple products using WooCommerce stock management. It has no author-operated service, remote account, telemetry, tracking, or advertisements.
+
+Do not describe Pro-only capabilities in the Free submission.
+
+## Source and Licensing Audit
+
+- [x] Main plugin headers use the canonical Free repository and current requirements.
+- [x] Main header, `readme.txt`, Composer metadata, and `LICENSE` consistently declare GPL-3.0-or-later.
+- [x] The full GNU GPL version 3 license text is included.
+- [x] Bundled source, documentation, and artwork are covered by the project license notice.
+- [x] No production third-party libraries are bundled.
+- [x] No minified JavaScript or CSS requires a separate human-readable source link.
+- [x] No author-operated external service, telemetry, tracking, or advertising is present.
+- [x] Email delivery is delegated only to the mail transport chosen by the site owner.
+- [x] Stored personal data, retention, export, erasure, and uninstall behavior are disclosed.
+
+## Readme and Header Audit
+
+- [x] Plugin name, description, author, URLs, text domain, domain path, and license are complete.
+- [x] `Requires Plugins: woocommerce` is declared in the main plugin header.
+- [x] `Stable tag` matches the plugin version exactly.
+- [x] The short description is below 150 characters.
+- [x] No more than five relevant tags are declared.
+- [x] Installation, FAQ, privacy, external-service, changelog, upgrade, and support content describe implemented Free behavior.
+- [x] Screenshot captions are omitted until matching directory assets exist.
+- [x] No personal or collaborator identity is declared in distributable metadata.
+
+## Quality Gates
+
+Run from a clean repository:
 
 ```bash
+composer install
+vendor/bin/phpcs
+find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
 bash bin/build-release.sh
-(cd dist && sha256sum --check *.sha256)
-unzip -Z1 dist/hold-this-product-*.zip
+(cd dist && sha256sum --check hold-this-product-1.1.0.zip.sha256)
 ```
 
-- [x] Repeated builds from the same commit produce the same checksum.
-- [x] The archive has one `hold-this-product/` root directory.
-- [x] The historical `HoldThisProduct.php` main filename is retained for upgrade compatibility.
-- [x] Tests, CI, Composer dependencies, local plans, IDE files, and contributor-only documents are absent.
-- [x] The archive installs and activates as `hold-this-product` on a clean WordPress site.
-- [x] Integration, concurrency, lifecycle, HPOS, and Plugin Check gates run against the installed archive.
+- [x] Static syntax and WordPress coding standards pass.
+- [x] Integration, concurrency, HPOS, checkout, activation, deactivation, upgrade, uninstall, and privacy tests pass.
+- [x] Plugin Check runs against the installed exact ZIP, not the development source tree.
+- [x] Remaining Plugin Check findings are reviewed: only advisory custom-post-type `meta_query` performance warnings remain.
+- [x] The exact ZIP installs and activates with WooCommerce on a clean site.
+- [x] The ZIP has one `hold-this-product/` root and excludes tests, CI, Git metadata, Composer tooling, local plans, development ZIPs, and contributor-only documents.
+- [x] The release contents contain only product-related attribution in text and image metadata.
+- [x] A second clean build produces the same SHA-256 checksum.
 
-## WordPress.org Assets
+Verified release candidate: `hold-this-product-1.1.0.zip`
 
-- [ ] Confirm icon and banner files meet current WordPress.org dimensions and file-size guidance.
-- [ ] Capture final screenshots from the exact release artifact.
-- [ ] Ensure screenshot numbering and captions match `readme.txt`.
-- [x] Generate or refresh `languages/hold-this-product.pot`.
+SHA-256: `f69cdd5a16c1cc2b63e6b48a00b0866a4798d8f9b02fcd5795b6bbfe3ead273a`
 
-## Publish
+## Initial Submission
 
-- [ ] Merge the reviewed release branch.
-- [ ] Build from the clean release commit.
-- [ ] Create signed/annotated tag `v1.1.0`.
-- [ ] Publish GitHub release notes from `CHANGELOG.md`.
-- [ ] Upload the exact checksum-verified artifact.
-- [ ] Publish the matching WordPress.org SVN tag and assets if the plugin is listed there.
-- [ ] Install the published package on a clean smoke-test site.
-- [ ] Monitor support, Site Health reports, checkout behavior, and inventory reports after release.
+- [ ] Sign in at https://wordpress.org/plugins/developers/add/
+- [ ] Upload the checksum-verified `dist/hold-this-product-1.1.0.zip`.
+- [ ] Paste the reviewer overview above and answer review questions accurately.
+- [ ] Do not submit duplicate ZIPs while review is pending.
+- [ ] Respond to review email from the submitting WordPress.org account.
+- [ ] Make any requested changes in the public source repository and submit a newly built exact artifact.
 
-Publishing, tagging, and WordPress.org submission require the repository and marketplace account holder to authorize the final release action. Do not mark those items complete based only on a local build.
+## Directory Assets
+
+Icons, banners, and screenshots are optional for initial submission and are not included in the release ZIP.
+
+- [ ] Finalize `icon-128x128.png` and `icon-256x256.png`.
+- [ ] Finalize `banner-772x250.png` and `banner-1544x500.png`.
+- [ ] Capture screenshots from the exact release artifact.
+- [ ] Add screenshot captions to `readme.txt` only when all matching files are ready.
+- [ ] Upload assets to the WordPress.org SVN repository's top-level `/assets` directory after approval.
+
+## After Approval
+
+- [ ] Check out the assigned WordPress.org SVN repository.
+- [ ] Copy the exact release contents, without the outer ZIP directory, into SVN `/trunk`.
+- [ ] Copy approved directory artwork into SVN `/assets`.
+- [ ] Create SVN `/tags/1.1.0` from the exact release contents.
+- [ ] Commit trunk, tag, and assets with the WordPress.org account.
+- [ ] Verify the public directory page, download ZIP, dependency installation, readme formatting, and support forum.
+- [ ] Compare the WordPress.org download package to the approved source contents.
+- [ ] Tag `v1.1.0` in GitHub and publish matching release notes.
+- [ ] Install the published WordPress.org package on a clean site and repeat the smoke test.
+
+## Ongoing Releases
+
+Increment the plugin header version and `HTP_VERSION`, update `Stable tag`, changelog, tested versions, POT file, source tag, SVN trunk, and SVN version tag together. Never move an existing SVN version tag to different code.

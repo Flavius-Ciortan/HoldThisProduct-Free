@@ -2,7 +2,7 @@
 
 All notable changes to Hold This Product are documented here. The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semantic versioning.
 
-## [1.1.0] - 2026-08-31
+## 1.1.0 - 2026-09-03
 
 ### Added
 
@@ -14,6 +14,7 @@ All notable changes to Hold This Product are documented here. The project follow
 - Automated integration, concurrency, activation/deactivation/upgrade/uninstall, HPOS, and exact-artifact test harnesses.
 - Live verification fixtures for classic checkout, block checkout, customer flow, Shop Manager access, and Administrator access.
 - Reduced-motion handling for frontend and admin plugin controls.
+- Complete WordPress.org submission metadata, privacy disclosures, and canonical licensing.
 
 ### Changed
 
@@ -41,8 +42,10 @@ All notable changes to Hold This Product are documented here. The project follow
 - Corrected settings validation feedback and product-search return types.
 - Corrected pending and active frontend success messages and their visible inline timing.
 - Restored stock during uninstall only when the reservation still owned a held unit.
+- Included customer names and related reservation identifiers in privacy exports.
+- Removed stored customer names and free-text denial details during privacy erasure.
 
-## [1.0.1] - 2026-07-28
+## 1.0.1 - 2026-07-28
 
 ### Changed
 
@@ -53,7 +56,7 @@ All notable changes to Hold This Product are documented here. The project follow
 
 - Improved stock idempotency across reservation, approval, cancellation, expiration, and checkout paths.
 
-## [1.0.0] - 2025-11-12
+## 1.0.0 - 2025-11-12
 
 ### Added
 
@@ -62,7 +65,3 @@ All notable changes to Hold This Product are documented here. The project follow
 - My Account reservation management.
 - Merchant settings, reservation dashboard, basic analytics, and product-level active reservations.
 - Optional approval workflow, email notifications, modal customization, and per-customer limits.
-
-[1.1.0]: https://github.com/Flavius-Ciortan/HoldThisProduct/compare/v1.0.1...v1.1.0
-[1.0.1]: https://github.com/Flavius-Ciortan/HoldThisProduct/compare/v1.0.0...v1.0.1
-[1.0.0]: https://github.com/Flavius-Ciortan/HoldThisProduct/releases/tag/v1.0.0

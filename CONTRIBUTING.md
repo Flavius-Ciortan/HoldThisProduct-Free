@@ -1,6 +1,6 @@
-# Contributing to HoldThisProduct
+# Contributing to Hold This Product
 
-Thank you for considering contributing to HoldThisProduct! This document provides guidelines and instructions for contributing.
+Thank you for considering a contribution to Hold This Product. This document provides development and review guidelines.
 
 ## Table of Contents
 
@@ -26,15 +26,16 @@ This project adheres to a code of conduct. By participating, you are expected to
 ### Development Environment
 
 1. **Requirements:**
-   - WordPress 5.8+
-   - WooCommerce 5.0+
+   - WordPress 6.5+
+   - WooCommerce 8.0+
    - PHP 7.4+
-   - MySQL 5.6+
-   - Node.js (for build tools, if needed)
+   - A database version supported by the selected WordPress release
+   - Node.js for JavaScript syntax checks
+   - Composer for PHP quality tooling
 
 2. **Setup:**
    ```bash
-   git clone https://github.com/Flavius-Ciortan/HoldThisProduct-Free.git hold-this-product
+   git clone <repository-url> hold-this-product
    cd hold-this-product
    ```
 
@@ -166,21 +167,21 @@ function doSomething(){
 
 ```markdown
 ## What
-Adds support for variable products
+Improves reservation expiry notices
 
 ## Why
-Users requested ability to reserve product variations
+Merchants need clearer diagnostics when scheduled expiry is delayed
 
 ## How
-- Extended is_product_reservable() to handle variations
-- Added variation selection to reservation modal
-- Updated stock management for variations
+- Added a focused Site Health diagnostic
+- Kept expiration behavior in the canonical expiration service
+- Added integration coverage for schedule recovery
 
 ## Testing
-- Created variable product with 3 variations
-- Tested reservation on each variation
-- Verified stock management
-- Tested expiration handling
+- Removed the scheduled event
+- Ran the health check
+- Verified that the event was restored once
+- Ran the integration and lifecycle suites
 
 Fixes #123
 ```
@@ -238,7 +239,7 @@ Any other relevant information.
 **Is your feature request related to a problem?**
 Clear description of the problem.
 
-**Describe the solution you'd like**
+**Describe the solution you would like**
 Clear description of what you want to happen.
 
 **Describe alternatives you've considered**
@@ -385,8 +386,8 @@ Handled by maintainers:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under GPLv3.
+By contributing, you agree that your contributions will be licensed under GPL-3.0-or-later.
 
 ---
 
-Thank you for helping make HoldThisProduct better! 🎉
+Thank you for helping improve Hold This Product.

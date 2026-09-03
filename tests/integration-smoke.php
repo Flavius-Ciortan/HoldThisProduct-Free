@@ -382,10 +382,17 @@ $htp_privacy_ids = array();
 for ( $htp_i = 0; $htp_i < 101; $htp_i++ ) {
 	$htp_privacy_ids[] = htp_test_reservation( $htp_product_id, $htp_privacy_user_id, 'expired', time() - HOUR_IN_SECONDS );
 }
+HTP_Reservation_Meta::update( $htp_privacy_ids[0], HTP_Reservation_Meta::NAME, 'Privacy' );
+HTP_Reservation_Meta::update( $htp_privacy_ids[0], HTP_Reservation_Meta::SURNAME, 'Customer' );
+HTP_Reservation_Meta::update( $htp_privacy_ids[0], HTP_Reservation_Meta::DENIAL_REASON, 'Contains personal context' );
+$htp_export       = $htp_plugin->reservations->export_personal_data( 'htp-privacy@example.test', 1 );
+$htp_export_names = wp_list_pluck( $htp_export['data'][0]['data'], 'name' );
+htp_assert( in_array( 'User ID', $htp_export_names, true ) && in_array( 'First name', $htp_export_names, true ) && in_array( 'Created', $htp_export_names, true ) && in_array( 'Inventory state', $htp_export_names, true ) && in_array( 'Related order ID', $htp_export_names, true ), 'Privacy exporter includes all customer and reservation identifiers.' );
 $htp_erase_first = $htp_plugin->reservations->erase_personal_data( 'htp-privacy@example.test', 1 );
 $htp_erase_second = $htp_plugin->reservations->erase_personal_data( 'htp-privacy@example.test', 2 );
 $htp_privacy_remaining = get_posts( array( 'post_type' => 'htp_reservation', 'post_status' => 'publish', 'author' => $htp_privacy_user_id, 'fields' => 'ids', 'posts_per_page' => -1 ) );
 htp_assert( ! $htp_erase_first['done'] && $htp_erase_second['done'] && empty( $htp_privacy_remaining ), 'Privacy eraser processes a shrinking result set without skipping records.' );
+htp_assert( '' === HTP_Reservation_Meta::get( $htp_privacy_ids[0], HTP_Reservation_Meta::NAME ) && '' === HTP_Reservation_Meta::get( $htp_privacy_ids[0], HTP_Reservation_Meta::SURNAME ) && '' === HTP_Reservation_Meta::get( $htp_privacy_ids[0], HTP_Reservation_Meta::DENIAL_REASON ), 'Privacy eraser removes customer names and free-text denial details.' );
 
 $htp_delete_user_id = wp_insert_user( array( 'user_login' => 'htp-delete-user', 'user_pass' => wp_generate_password( 24 ), 'user_email' => 'htp-delete@example.test', 'role' => 'customer' ) );
 $htp_delete_reservation_id = htp_test_reservation( $htp_product_id, $htp_delete_user_id, 'active', time() + HOUR_IN_SECONDS );

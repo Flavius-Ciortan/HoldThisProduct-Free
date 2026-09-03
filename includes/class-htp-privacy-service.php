@@ -26,18 +26,40 @@ final class HTP_Privacy_Service {
 		$ids  = $this->find_reservations( $email_address, $page );
 		$data = array();
 		foreach ( $ids as $reservation_id ) {
-			$data[] = array(
+			$created_at = get_post_timestamp( $reservation_id );
+			$expires_at = (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT );
+			$data[]     = array(
 				'group_id'    => 'hold-this-product-reservations',
 				'group_label' => __( 'Product reservations', 'hold-this-product' ),
 				'item_id'     => 'htp-reservation-' . $reservation_id,
 				'data'        => array(
 					array(
+						'name'  => __( 'User ID', 'hold-this-product' ),
+						'value' => (int) get_post_field( 'post_author', $reservation_id ),
+					),
+					array(
+						'name'  => __( 'First name', 'hold-this-product' ),
+						'value' => sanitize_text_field( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::NAME ) ),
+					),
+					array(
+						'name'  => __( 'Last name', 'hold-this-product' ),
+						'value' => sanitize_text_field( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::SURNAME ) ),
+					),
+					array(
 						'name'  => __( 'Product ID', 'hold-this-product' ),
 						'value' => (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::PRODUCT_ID ),
 					),
 					array(
+						'name'  => __( 'Quantity', 'hold-this-product' ),
+						'value' => max( 1, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::QUANTITY ) ),
+					),
+					array(
 						'name'  => __( 'Status', 'hold-this-product' ),
 						'value' => sanitize_text_field( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::STATUS ) ),
+					),
+					array(
+						'name'  => __( 'Created', 'hold-this-product' ),
+						'value' => $created_at ? wp_date( DATE_ATOM, $created_at ) : '',
 					),
 					array(
 						'name'  => __( 'Email', 'hold-this-product' ),
@@ -45,7 +67,19 @@ final class HTP_Privacy_Service {
 					),
 					array(
 						'name'  => __( 'Expires', 'hold-this-product' ),
-						'value' => wp_date( DATE_ATOM, (int) HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT ) ),
+						'value' => $expires_at ? wp_date( DATE_ATOM, $expires_at ) : '',
+					),
+					array(
+						'name'  => __( 'Inventory state', 'hold-this-product' ),
+						'value' => sanitize_key( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::INVENTORY_STATE ) ),
+					),
+					array(
+						'name'  => __( 'Related order ID', 'hold-this-product' ),
+						'value' => absint( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::ORDER_ID ) ),
+					),
+					array(
+						'name'  => __( 'Denial reason', 'hold-this-product' ),
+						'value' => sanitize_text_field( HTP_Reservation_Meta::get( $reservation_id, HTP_Reservation_Meta::DENIAL_REASON ) ),
 					),
 				),
 			);
@@ -63,6 +97,9 @@ final class HTP_Privacy_Service {
 		$retained = $this->has_retained_reservations( $email_address );
 		foreach ( $ids as $reservation_id ) {
 			HTP_Reservation_Meta::update( $reservation_id, HTP_Reservation_Meta::EMAIL, wp_privacy_anonymize_data( 'email', $email_address ) );
+			HTP_Reservation_Meta::delete( $reservation_id, HTP_Reservation_Meta::NAME );
+			HTP_Reservation_Meta::delete( $reservation_id, HTP_Reservation_Meta::SURNAME );
+			HTP_Reservation_Meta::delete( $reservation_id, HTP_Reservation_Meta::DENIAL_REASON );
 			wp_update_post(
 				array(
 					'ID'          => $reservation_id,

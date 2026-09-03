@@ -144,7 +144,11 @@ Enable notifications, confirm the customer address, and test the site's general 
 
 ## Data and Privacy
 
-Reservations store customer identity, email, product, timestamps, quantity, status, inventory ownership, and linked order data where applicable. WordPress personal-data export and erasure tools include reservation records. Erasure anonymizes/deletes eligible records without abandoning an active inventory obligation.
+Reservations can store the customer user ID, first and last name, email address, product ID, quantity, status, creation and expiry times, inventory state, denial details, cancellation metadata, and a related order ID. The data remains in the site's WordPress database. Hold This Product does not send it, telemetry, or usage analytics to the plugin authors.
+
+When email notifications are enabled, WordPress passes reservation message content and the customer email address to the mail delivery system configured by the site owner. That system may be operated by the web host, an SMTP plugin, or another third party. Hold This Product does not select a provider.
+
+WordPress personal-data exports include reservation identity and operational details. For closed reservations, erasure removes the customer link, name, surname, email address, and free-text denial reason. The operational reservation, status, product, inventory, and order linkage remain to preserve stock and order correctness. Open reservations remain identifiable until their inventory obligation ends; the customer can submit another erasure request after the reservation closes.
 
 Uninstall permanently removes plugin settings and reservation records. Stock is restored only for reservations that still own a held inventory unit. Back up the database before uninstalling from a production store.
 
