@@ -3,9 +3,13 @@ jQuery(document).ready(function($) {
 	var $modal = $('#reservation-modal');
 
 	function closeReservationModal() {
+		if (!$modal.is(':visible')) {
+			return;
+		}
 		$modal.hide().attr('aria-hidden', 'true');
 		if (modalOpener) {
 			$(modalOpener).trigger('focus');
+			modalOpener = null;
 		}
 	}
 	$(document).on('click', '.htp-reservations-table .cancel-reservation[data-reservation-id]', function(e) {
@@ -31,6 +35,7 @@ jQuery(document).ready(function($) {
         $notice
             .removeClass('htp-reservation-notice--success htp-reservation-notice--error')
             .addClass('htp-reservation-notice--' + type)
+			.attr('role', type === 'error' ? 'alert' : 'status')
             .text(message)
             .show();
     }
@@ -60,8 +65,12 @@ jQuery(document).ready(function($) {
         $('#reservation-form').find('input[name="product_id"]').val(productId);
         
 		$modal.show().attr('aria-hidden', 'false');
-		$modal.find('.modal-box').trigger('focus');
+		$modal.find('.modal-close').trigger('focus');
     });
+
+	$(document).on('click', '#reservation-modal .modal-close', function() {
+		closeReservationModal();
+	});
 
     $(document).on('click', '.modal-overlay', function(e) {
         if (e.target === this) {
@@ -70,7 +79,8 @@ jQuery(document).ready(function($) {
     });
 
     $(document).on('keydown', function(e) {
-        if (e.key === 'Escape') {
+		if (e.key === 'Escape' && $modal.is(':visible')) {
+			e.preventDefault();
 			closeReservationModal();
 		} else if (e.key === 'Tab' && $modal.is(':visible')) {
 			var $focusable = $modal.find('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])').filter(':visible');
@@ -104,13 +114,15 @@ jQuery(document).ready(function($) {
 		ajaxData.quantity = formData.get('quantity') || 1;
 		ajaxData.security = holdthisproduct_ajax.nonce;
 
-        var $submitBtn = $form.find('button[type="submit"]');
+		var $submitBtn = $form.find('button[type="submit"]');
         var originalText = $submitBtn.text();
+		var completed = false;
 		$submitBtn.prop('disabled', true).text(holdthisproduct_ajax.i18n.processing);
 
         $.post(holdthisproduct_ajax.ajax_url, ajaxData)
         .done(function(response) {
             if (response.success) {
+				completed = true;
                 var successMessage = response.data || 'Reservation successful!';
                 renderNotice(successMessage, 'success');
                 window.setTimeout(function() {
@@ -125,7 +137,9 @@ jQuery(document).ready(function($) {
             renderNotice('Request failed. Please try again.', 'error');
         })
         .always(function() {
-            $submitBtn.prop('disabled', false).text(originalText);
+			if (!completed) {
+				$submitBtn.prop('disabled', false).text(originalText);
+			}
         });
     });
 });

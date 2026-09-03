@@ -69,17 +69,18 @@ if ( $enable_popup_customization ) {
 }
 ?>
 
-<div id="reservation-modal" class="modal-overlay htp-modal-overlay" title="<?php esc_attr_e( 'Reserve Product', 'hold-this-product' ); ?>" aria-hidden="true" style="display: none;">
-	<div class="modal-box htp-modal-box<?php echo $enable_popup_customization ? ' htp-modal-box--custom' : ''; ?>" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Reserve Product', 'hold-this-product' ); ?>" tabindex="-1" style="<?php echo esc_attr( $modal_box_style ); ?>">
+<div id="reservation-modal" class="modal-overlay htp-modal-overlay" aria-hidden="true" style="display: none;">
+	<div class="modal-box htp-modal-box<?php echo $enable_popup_customization ? ' htp-modal-box--custom' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="htp-reservation-dialog-title" tabindex="-1" style="<?php echo esc_attr( $modal_box_style ); ?>">
+		<button type="button" class="modal-close" aria-label="<?php esc_attr_e( 'Close reservation dialog', 'hold-this-product' ); ?>">&times;</button>
 		<form id="reservation-form">
 			<input type="hidden" name="action" value="holdthisproduct_reserve">
 			<input type="hidden" name="security" value="<?php echo esc_attr( wp_create_nonce( 'holdthisproduct_nonce' ) ); ?>">
 			<input type="hidden" name="product_id" value="<?php echo esc_attr( $pid ); ?>">
 
-			<div class="htp-reservation-notice" aria-live="polite" style="display: none;"></div>
+			<div class="htp-reservation-notice" role="status" aria-live="polite" aria-atomic="true" style="display: none;"></div>
 			<?php do_action( 'htp_reservation_form_fields', $product ); ?>
 
-			<p><strong><?php esc_html_e( 'Reserve this product', 'hold-this-product' ); ?></strong></p>
+			<h2 id="htp-reservation-dialog-title"><?php esc_html_e( 'Reserve this product', 'hold-this-product' ); ?></h2>
 				<p>
 					<?php
 					if ( $requires_approval ) {

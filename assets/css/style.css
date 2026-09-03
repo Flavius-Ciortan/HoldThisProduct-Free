@@ -402,6 +402,8 @@ label[for="rez_check"] {
     border: 1px solid rgba(255, 255, 255, 0.18);
     position: relative;
     text-align: center;
+	max-height: calc(100vh - 36px);
+	overflow-y: auto;
 }
 
 /* When customization is not enabled, match the admin pages' base background gradient. */
@@ -458,6 +460,26 @@ label[for="rez_check"] {
 }
 .modal-close:hover {
   color: #000;
+}
+
+.modal-close:focus,
+.modal-close:focus-visible {
+	color: #000;
+	outline: 3px solid rgba(47, 137, 249, 0.5);
+	outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+	.htp-modal-overlay.modal-overlay {
+		align-items: flex-start;
+		padding: 10px;
+	}
+
+	.htp-modal-box.modal-box {
+		width: 100%;
+		max-height: calc(100vh - 20px);
+		padding: 20px 16px;
+	}
 }
 
 /* Submit button */

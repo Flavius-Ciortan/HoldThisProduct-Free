@@ -23,6 +23,7 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
       - run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: find bin tests -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
       - run: vendor/bin/phpcs
 
   integration:
@@ -34,7 +35,13 @@ jobs:
           - php: '7.4'
             wordpress: '6.5.5'
             woocommerce: '8.0.3'
+          - php: '8.0'
+            wordpress: 'latest'
+            woocommerce: 'latest'
           - php: '8.3'
+            wordpress: 'latest'
+            woocommerce: 'latest'
+          - php: '8.4'
             wordpress: 'latest'
             woocommerce: 'latest'
     services:
@@ -77,7 +84,7 @@ jobs:
       - name: Run concurrent last-unit stress test
         run: bash tests/concurrency-stress.sh /tmp/wordpress
       - name: Run HPOS compatibility matrix
-        if: matrix.woocommerce == 'latest'
+        if: matrix.php == '8.4'
         run: bash tests/hpos-matrix.sh /tmp/wordpress
 
   release-artifact:
