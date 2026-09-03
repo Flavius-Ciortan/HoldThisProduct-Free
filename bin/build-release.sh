@@ -20,7 +20,8 @@ if [[ -z "$header_version" || "$header_version" != "$constant_version" ]]; then
 	exit 1
 fi
 
-source_date_epoch="${SOURCE_DATE_EPOCH:-$(git show -s --format=%ct HEAD)}"
+# A stable default makes equivalent source trees reproducible across commits and hosts.
+source_date_epoch="${SOURCE_DATE_EPOCH:-946684800}"
 archive_name="$slug-$header_version.zip"
 temporary="$(mktemp -d)"
 trap 'rm -rf "$temporary"' EXIT
@@ -33,6 +34,9 @@ while IFS= read -r excluded || [[ -n "$excluded" ]]; do
 	rm -rf "$temporary/$slug/$excluded"
 done < "$root/.distignore"
 
+find "$temporary/$slug" -type d -exec chmod 0755 {} +
+find "$temporary/$slug" -type f -exec chmod 0644 {} +
+export TZ=UTC
 find "$temporary/$slug" -exec touch -h -d "@$source_date_epoch" {} +
 mkdir -p "$dist_dir"
 rm -f "$dist_dir/$archive_name" "$dist_dir/$archive_name.sha256"
