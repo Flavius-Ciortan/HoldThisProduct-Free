@@ -102,7 +102,8 @@ class HTP_Admin {
 				$title,
 				array( $this, $id . '_callback' ),
 				'holdthisproduct-settings',
-				'holdthisproduct_settings_section'
+				'holdthisproduct_settings_section',
+				array( 'label_for' => $id )
 			);
 		}
 	}
@@ -255,7 +256,7 @@ class HTP_Admin {
 		echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <label class="toggle-switch">
-                        <input type="checkbox" name="holdthisproduct_options[enable_reservation]" value="1" ' . esc_attr( $checked ) . '>
+                        <input type="checkbox" id="holdthisproduct_enable_reservation" name="holdthisproduct_options[enable_reservation]" value="1" ' . esc_attr( $checked ) . '>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -271,7 +272,7 @@ class HTP_Admin {
 		$value   = isset( $options['max_reservations'] ) ? absint( $options['max_reservations'] ) : 1;
 		echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
-                    <input type="number" name="holdthisproduct_options[max_reservations]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
+                    <input type="number" id="holdthisproduct_max_reservations" name="holdthisproduct_options[max_reservations]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
                 </div>
                 <p class="description">Limit how many active reservations a user can have at once.</p>
               </div>';
@@ -286,7 +287,7 @@ class HTP_Admin {
 		echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <div class="htp-input-right-align">
-                        <input type="number" name="holdthisproduct_options[reservation_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
+                        <input type="number" id="holdthisproduct_reservation_duration" name="holdthisproduct_options[reservation_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
                     </div>
                 </div>
                 <p class="description">How long reservations last (1-168 hours, default: 24)</p>
@@ -300,7 +301,7 @@ class HTP_Admin {
 		echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <div class="htp-input-right-align">
-                        <input type="number" min="1" max="168" name="holdthisproduct_options[pending_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
+                        <input type="number" id="holdthisproduct_pending_duration" min="1" max="168" name="holdthisproduct_options[pending_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
                     </div>
                 </div>
                 <p class="description">How long an approval request remains open. The active reservation duration starts when it is approved.</p>
@@ -316,7 +317,7 @@ class HTP_Admin {
 		echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <label class="toggle-switch">
-                        <input type="checkbox" name="holdthisproduct_options[enable_email_notifications]" value="1" ' . esc_attr( $checked ) . '>
+                        <input type="checkbox" id="holdthisproduct_enable_email_notifications" name="holdthisproduct_options[enable_email_notifications]" value="1" ' . esc_attr( $checked ) . '>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -333,7 +334,7 @@ class HTP_Admin {
 		echo '<div class="htp-setting-field">
                 <div class="htp-setting-control">
                     <label class="toggle-switch">
-                        <input type="checkbox" name="holdthisproduct_options[require_admin_approval]" value="1" ' . esc_attr( $checked ) . '>
+                        <input type="checkbox" id="holdthisproduct_require_admin_approval" name="holdthisproduct_options[require_admin_approval]" value="1" ' . esc_attr( $checked ) . '>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -384,13 +385,13 @@ class HTP_Admin {
 				<?php settings_errors( 'holdthisproduct_options' ); ?>
 				<!-- Navigation Tabs -->
 				<div class="htp-nav-wrapper">
-					<div class="htp-nav-tabs">
-						<button type="button" class="htp-nav-tab" data-target="general">
-							<span class="htp-tab-icon">⚙️</span>
+					<div class="htp-nav-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Settings sections', 'hold-this-product' ); ?>">
+						<button type="button" id="htp-tab-general" class="htp-nav-tab htp-nav-tab-active" data-target="general" role="tab" aria-controls="htp-general" aria-selected="true" tabindex="0">
+							<span class="htp-tab-icon" aria-hidden="true">⚙️</span>
 							<span class="htp-tab-text"><?php esc_html_e( 'General Settings', 'hold-this-product' ); ?></span>
 						</button>
-						<button type="button" class="htp-nav-tab" data-target="logged-in">
-							<span class="htp-tab-icon">🎨</span>
+						<button type="button" id="htp-tab-logged-in" class="htp-nav-tab" data-target="logged-in" role="tab" aria-controls="htp-logged-in" aria-selected="false" tabindex="-1">
+							<span class="htp-tab-icon" aria-hidden="true">🎨</span>
 							<span class="htp-tab-text"><?php esc_html_e( 'Pop-up Customization', 'hold-this-product' ); ?></span>
 						</button>
 					</div>
@@ -401,7 +402,7 @@ class HTP_Admin {
 					<?php settings_fields( 'holdthisproduct_options_group' ); ?>
 					<div class="htp-tab-container">
 						<!-- General Settings Tab -->
-						<div id="htp-general" class="htp-tab-content">
+						<div id="htp-general" class="htp-tab-content htp-tab-active" role="tabpanel" aria-labelledby="htp-tab-general" tabindex="0">
 							<div class="htp-settings-card">
 								<div class="htp-card-header">
 									<h3><?php esc_html_e( 'Configuration', 'hold-this-product' ); ?></h3>
@@ -414,7 +415,7 @@ class HTP_Admin {
 						</div>
 
 						<!-- Pop-up Customization Tab -->
-						<div id="htp-logged-in" class="htp-tab-content">
+						<div id="htp-logged-in" class="htp-tab-content" role="tabpanel" aria-labelledby="htp-tab-logged-in" tabindex="0" hidden>
 							<div class="htp-settings-card">
 								<div class="htp-card-header">
 									<h3><?php esc_html_e( 'Pop-up Customization', 'hold-this-product' ); ?></h3>
@@ -429,12 +430,12 @@ class HTP_Admin {
 									?>
 										<table class="form-table">
 											<tr>
-												<th scope="row"><?php esc_html_e( 'Enable Pop-up Customization', 'hold-this-product' ); ?></th>
+												<th scope="row"><label for="holdthisproduct_enable_popup_customization_logged_in"><?php esc_html_e( 'Enable Pop-up Customization', 'hold-this-product' ); ?></label></th>
 												<td>
 													<div class="htp-setting-field">
 														<div class="htp-setting-control">
 															<label class="toggle-switch">
-																<input type="checkbox" name="holdthisproduct_options[enable_popup_customization_logged_in]" value="1" <?php checked( $enable_popup_customization_logged_in ); ?>>
+														<input type="checkbox" id="holdthisproduct_enable_popup_customization_logged_in" name="holdthisproduct_options[enable_popup_customization_logged_in]" value="1" <?php checked( $enable_popup_customization_logged_in ); ?>>
 																<span class="slider"></span>
 															</label>
 														</div>
@@ -446,17 +447,17 @@ class HTP_Admin {
 									<div class="htp-popup-customization-fields-logged-in" style="display:<?php echo $enable_popup_customization_logged_in ? 'block' : 'none'; ?>;margin-top:1rem;">
 										<table class="form-table">
 											<tr>
-												<th scope="row"><?php esc_html_e( 'Border Radius (px)', 'hold-this-product' ); ?></th>
-												<td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][border_radius]" value="<?php echo esc_attr( $popup_settings_logged_in['border_radius'] ?? '12' ); ?>" class="htp-input-right-align"></td>
+												<th scope="row"><label for="holdthisproduct_popup_border_radius"><?php esc_html_e( 'Border Radius (px)', 'hold-this-product' ); ?></label></th>
+												<td><input type="number" id="holdthisproduct_popup_border_radius" name="holdthisproduct_options[popup_customization_logged_in][border_radius]" value="<?php echo esc_attr( $popup_settings_logged_in['border_radius'] ?? '12' ); ?>" class="htp-input-right-align"></td>
 											</tr>
 											<tr>
-												<th scope="row"><?php esc_html_e( 'Background Color', 'hold-this-product' ); ?></th>
-												<td><input type="color" name="holdthisproduct_options[popup_customization_logged_in][background_color]" value="<?php echo esc_attr( $popup_settings_logged_in['background_color'] ?? '#ffffff' ); ?>" class="htp-input-right-align"></td>
+												<th scope="row"><label for="holdthisproduct_popup_background_color"><?php esc_html_e( 'Background Color', 'hold-this-product' ); ?></label></th>
+												<td><input type="color" id="holdthisproduct_popup_background_color" name="holdthisproduct_options[popup_customization_logged_in][background_color]" value="<?php echo esc_attr( $popup_settings_logged_in['background_color'] ?? '#ffffff' ); ?>" class="htp-input-right-align"></td>
 											</tr>
 											<tr>
-												<th scope="row"><?php esc_html_e( 'Font Family', 'hold-this-product' ); ?></th>
+												<th scope="row"><label for="holdthisproduct_popup_font_family"><?php esc_html_e( 'Font Family', 'hold-this-product' ); ?></label></th>
 												<td>
-													<select name="holdthisproduct_options[popup_customization_logged_in][font_family]" class="htp-input-right-align">
+													<select id="holdthisproduct_popup_font_family" name="holdthisproduct_options[popup_customization_logged_in][font_family]" class="htp-input-right-align">
 														<?php
 														$fonts         = $this->get_popup_font_choices();
 														$selected_font = $popup_settings_logged_in['font_family'] ?? 'Arial, Helvetica, sans-serif';
@@ -468,12 +469,12 @@ class HTP_Admin {
 												</td>
 											</tr>
 											<tr>
-												<th scope="row"><?php esc_html_e( 'Font Size (px)', 'hold-this-product' ); ?></th>
-												<td><input type="number" name="holdthisproduct_options[popup_customization_logged_in][font_size]" value="<?php echo esc_attr( $popup_settings_logged_in['font_size'] ?? '16' ); ?>" class="htp-input-right-align"></td>
+												<th scope="row"><label for="holdthisproduct_popup_font_size"><?php esc_html_e( 'Font Size (px)', 'hold-this-product' ); ?></label></th>
+												<td><input type="number" id="holdthisproduct_popup_font_size" name="holdthisproduct_options[popup_customization_logged_in][font_size]" value="<?php echo esc_attr( $popup_settings_logged_in['font_size'] ?? '16' ); ?>" class="htp-input-right-align"></td>
 											</tr>
 											<tr>
-												<th scope="row"><?php esc_html_e( 'Text Color', 'hold-this-product' ); ?></th>
-												<td><input type="color" name="holdthisproduct_options[popup_customization_logged_in][text_color]" value="<?php echo esc_attr( $popup_settings_logged_in['text_color'] ?? '#222222' ); ?>" class="htp-input-right-align"></td>
+												<th scope="row"><label for="holdthisproduct_popup_text_color"><?php esc_html_e( 'Text Color', 'hold-this-product' ); ?></label></th>
+												<td><input type="color" id="holdthisproduct_popup_text_color" name="holdthisproduct_options[popup_customization_logged_in][text_color]" value="<?php echo esc_attr( $popup_settings_logged_in['text_color'] ?? '#222222' ); ?>" class="htp-input-right-align"></td>
 											</tr>
 										</table>
 									</div>

@@ -70,7 +70,7 @@ if ( $enable_popup_customization ) {
 ?>
 
 <div id="reservation-modal" class="modal-overlay htp-modal-overlay" aria-hidden="true" style="display: none;">
-	<div class="modal-box htp-modal-box<?php echo $enable_popup_customization ? ' htp-modal-box--custom' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="htp-reservation-dialog-title" tabindex="-1" style="<?php echo esc_attr( $modal_box_style ); ?>">
+	<div class="modal-box htp-modal-box<?php echo $enable_popup_customization ? ' htp-modal-box--custom' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="htp-reservation-dialog-title" aria-describedby="htp-reservation-dialog-description" tabindex="-1" style="<?php echo esc_attr( $modal_box_style ); ?>">
 		<button type="button" class="modal-close" aria-label="<?php esc_attr_e( 'Close reservation dialog', 'hold-this-product' ); ?>">&times;</button>
 		<form id="reservation-form">
 			<input type="hidden" name="action" value="holdthisproduct_reserve">
@@ -81,7 +81,7 @@ if ( $enable_popup_customization ) {
 			<?php do_action( 'htp_reservation_form_fields', $product ); ?>
 
 			<h2 id="htp-reservation-dialog-title"><?php esc_html_e( 'Reserve this product', 'hold-this-product' ); ?></h2>
-				<p>
+				<p id="htp-reservation-dialog-description">
 					<?php
 					if ( $requires_approval ) {
 						printf(

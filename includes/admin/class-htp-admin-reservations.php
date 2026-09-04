@@ -106,6 +106,7 @@ class HTP_Admin_Reservations {
 
 			<div class="tablenav top" style="margin: 20px 0;">
 				<div class="alignleft actions">
+					<label class="screen-reader-text" for="status-filter"><?php esc_html_e( 'Filter reservations by status', 'hold-this-product' ); ?></label>
 					<select name="status_filter" id="status-filter">
 						<option value="all" <?php selected( $status_filter, 'all' ); ?>><?php esc_html_e( 'All Statuses', 'hold-this-product' ); ?></option>
 						<?php foreach ( HTP_Reservation_Status::labels() as $status_value => $status_label ) : ?>
@@ -113,6 +114,7 @@ class HTP_Admin_Reservations {
 						<?php endforeach; ?>
 					</select>
 
+					<label class="screen-reader-text" for="search-type"><?php esc_html_e( 'Search reservations by', 'hold-this-product' ); ?></label>
 					<select name="search_type" id="search-type">
 						<option value="email" <?php selected( $search_type, 'email' ); ?>><?php esc_html_e( 'Email', 'hold-this-product' ); ?></option>
 						<option value="product" <?php selected( $search_type, 'product' ); ?>><?php esc_html_e( 'Product Name', 'hold-this-product' ); ?></option>
@@ -120,6 +122,7 @@ class HTP_Admin_Reservations {
 						<option value="customer_name" <?php selected( $search_type, 'customer_name' ); ?>><?php esc_html_e( 'Customer', 'hold-this-product' ); ?></option>
 					</select>
 
+					<label class="screen-reader-text" for="reservation-search"><?php esc_html_e( 'Search reservations', 'hold-this-product' ); ?></label>
 					<input type="search" id="reservation-search" placeholder="<?php esc_attr_e( 'Search reservations...', 'hold-this-product' ); ?>" value="<?php echo esc_attr( $search_query ); ?>" style="width: 200px;">
 
 					<button type="button" class="button" id="filter-reservations"><?php esc_html_e( 'Filter', 'hold-this-product' ); ?></button>
@@ -155,22 +158,23 @@ class HTP_Admin_Reservations {
 					</tbody>
 				</table>
 				<?php
-				echo wp_kses_post(
-					paginate_links(
-						array(
-							'base'    => add_query_arg(
-								array(
-									'paged'       => '%#%',
-									'status'      => $status_filter,
-									'search_type' => $search_type,
-									'search'      => $search_query,
-								)
-							),
-							'current' => $page,
-							'total'   => max( 1, (int) $query->max_num_pages ),
-						)
+				$pagination = paginate_links(
+					array(
+						'base'    => add_query_arg(
+							array(
+								'paged'       => '%#%',
+								'status'      => $status_filter,
+								'search_type' => $search_type,
+								'search'      => $search_query,
+							)
+						),
+						'current' => $page,
+						'total'   => max( 1, (int) $query->max_num_pages ),
 					)
 				);
+				if ( is_string( $pagination ) && '' !== $pagination ) {
+					echo wp_kses_post( $pagination );
+				}
 				?>
 			<?php endif; ?>
 		</div>

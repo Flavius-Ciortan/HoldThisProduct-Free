@@ -1,6 +1,6 @@
 # WordPress.org Directory Assets
 
-This repository folder is the staging location for optional WordPress.org directory artwork. It is excluded from the release ZIP. After the plugin is approved, copy finalized files to the top-level `/assets` directory of the assigned WordPress.org SVN repository, not to `/trunk/assets`.
+This repository folder contains the finalized WordPress.org directory artwork and its editable vector masters. It is excluded from the release ZIP. After the plugin is approved, copy the PNG files from this folder to the top-level `/assets` directory of the assigned WordPress.org SVN repository, not to `/trunk/assets`. Do not upload the `source/` directory.
 
 ## Supported Assets
 
@@ -16,34 +16,19 @@ Directory artwork is optional for initial code submission. Use these exact names
 
 ### Screenshots
 
-Only add a screenshot section to `readme.txt` after the matching files exist here. Use sequential names:
-- `screenshot-1.png` - Plugin settings page
-- `screenshot-2.png` - Product page with Reserve button
-- `screenshot-3.png` - Reservation modal
-- `screenshot-4.png` - My Account reservations page
-- `screenshot-5.png` - Admin reservations dashboard
-- `screenshot-6.png` - Product inventory reservations
-- `screenshot-7.png` - Basic reservation analytics
+The screenshot captions in `readme.txt` match these sequential files:
+- `screenshot-1.jpg` - Plugin settings page
+- `screenshot-2.jpg` - Product page with Reserve button
+- `screenshot-3.jpg` - Reservation modal
+- `screenshot-4.jpg` - My Account reservations page
+- `screenshot-5.jpg` - Admin reservations dashboard
+- `screenshot-6.jpg` - Basic reservation analytics
 
 ## Design Guidelines
 
-### Icon
-- Use the established blue, navy, and amber product palette
-- Should be recognizable at small sizes
-- Use the existing hand-and-package mark without small text
-- PNG format with transparent background
+The PNG assets use the established blue, navy, and amber palette. Icons contain no small text and remain identifiable at 128 pixels. Banners keep essential content in the central safe area. Screenshots were captured from the exact Free release behavior with only local demonstration records.
 
-### Banner
-- Feature product reservation concept
-- Use the established blue, navy, and amber product palette
-- Use the product name "Hold This Product"
-- Keep essential artwork and text inside the central safe area
-
-### Screenshots
-- Use actual plugin screenshots
-- Crop each image to the relevant interface rather than including unnecessary browser chrome
-- Show real functionality, not mockups
-- Include clear examples of features in action
+Editable masters are stored in `source/icon.svg` and `source/banner.svg`. Re-render both required dimensions after changing a master and visually inspect the standard and high-resolution outputs before publication.
 
 ## Upload Instructions
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Hold This Product icon</title>
+  <desc id="desc">A package held above an open hand.</desc>
+  <defs>
+    <linearGradient id="background" x1="24" y1="20" x2="232" y2="238" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#123f75"/>
+      <stop offset="0.55" stop-color="#082b57"/>
+      <stop offset="1" stop-color="#051b39"/>
+    </linearGradient>
+    <linearGradient id="halo" x1="72" y1="54" x2="194" y2="202" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#edf5f2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="54" fill="url(#background)"/>
+  <path d="M14 82C43 26 98 2 159 15C203 24 235 55 251 95V0H0V117C3 105 8 93 14 82Z" fill="#159bc2" opacity="0.20"/>
+  <path d="M197 0H256V70C241 40 222 17 197 0Z" fill="#ffbf2f" opacity="0.98"/>
+  <circle cx="128" cy="135" r="91" fill="#020e20" opacity="0.24"/>
+  <circle cx="128" cy="126" r="91" fill="url(#halo)"/>
+  <image x="35" y="33" width="186" height="186" preserveAspectRatio="xMidYMid meet" xlink:href="../../assets/images/logo-transparent.png"/>
+  <circle cx="214" cy="213" r="12" fill="#ffbf2f"/>
+  <circle cx="214" cy="213" r="4" fill="#082b57"/>
+</svg>

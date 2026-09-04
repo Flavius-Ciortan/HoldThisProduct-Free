@@ -57,7 +57,7 @@ Do not describe Pro-only capabilities in the Free submission.
 - [x] The short description is below 150 characters.
 - [x] No more than five relevant tags are declared.
 - [x] Installation, FAQ, privacy, external-service, changelog, upgrade, and support content describe implemented Free behavior.
-- [x] Screenshot captions are omitted until matching directory assets exist.
+- [x] Screenshot captions correspond one-for-one with finalized directory assets.
 - [x] No personal or collaborator identity is declared in distributable metadata.
 
 ## Quality Gates
@@ -77,6 +77,7 @@ bash bin/build-release.sh
 - [x] Integration, concurrency, HPOS, checkout, activation, deactivation, upgrade, uninstall, and privacy tests pass.
 - [x] Plugin Check runs against the installed exact ZIP, not the development source tree.
 - [x] Remaining Plugin Check findings are reviewed: only advisory custom-post-type `meta_query` performance warnings remain.
+- [x] A repeatable 5,000-record profile keeps all reviewed reservation metadata queries below 500 ms; the slowest measured operation was 60.11 ms in the local release environment.
 - [x] The exact ZIP installs and activates with WooCommerce on a clean site.
 - [x] The ZIP has one `hold-this-product/` root and excludes tests, CI, Git metadata, Composer tooling, local plans, development ZIPs, and contributor-only documents.
 - [x] The release contents contain only product-related attribution in text and image metadata.
@@ -84,7 +85,7 @@ bash bin/build-release.sh
 
 Verified release candidate: `hold-this-product-1.1.0.zip`
 
-SHA-256: `f69cdd5a16c1cc2b63e6b48a00b0866a4798d8f9b02fcd5795b6bbfe3ead273a`
+SHA-256: `c2aec54e9a8abaf919dbbea7134e6d2dccbdb50a4cc33df7ac22bd5d52c2b9e2`
 
 ## Initial Submission
 
@@ -99,10 +100,10 @@ SHA-256: `f69cdd5a16c1cc2b63e6b48a00b0866a4798d8f9b02fcd5795b6bbfe3ead273a`
 
 Icons, banners, and screenshots are optional for initial submission and are not included in the release ZIP.
 
-- [ ] Finalize `icon-128x128.png` and `icon-256x256.png`.
-- [ ] Finalize `banner-772x250.png` and `banner-1544x500.png`.
-- [ ] Capture screenshots from the exact release artifact.
-- [ ] Add screenshot captions to `readme.txt` only when all matching files are ready.
+- [x] Finalize `icon-128x128.png` and `icon-256x256.png`.
+- [x] Finalize `banner-772x250.png` and `banner-1544x500.png`.
+- [x] Capture screenshots from the exact release behavior.
+- [x] Add screenshot captions to `readme.txt` only when all matching files are ready.
 - [ ] Upload assets to the WordPress.org SVN repository's top-level `/assets` directory after approval.
 
 ## After Approval

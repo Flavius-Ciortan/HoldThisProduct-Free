@@ -98,6 +98,15 @@ Reservation records can contain the customer user ID, first and last name, email
 
 No. The plugin has no author-operated service, telemetry, tracking, advertisements, or remote account requirement. Email is handed to the mail system selected and configured by the site owner.
 
+== Screenshots ==
+
+1. Configure reservation limits, durations, approval workflow, email notifications, and modal appearance.
+2. Offer a clear Reserve Product action alongside WooCommerce purchasing controls.
+3. Confirm the hold duration in an accessible, keyboard-friendly reservation dialog.
+4. Customers can review deadlines, add reserved items to the cart, or cancel active reservations from My Account.
+5. Manage and filter reservation status, expiry, customer, and stock-hold actions from the WordPress dashboard.
+6. Review reservation totals, lifecycle outcomes, conversion rate, and recent activity.
+
 == Changelog ==
 
 = 1.1.0 - 2026-09-03 =
@@ -111,6 +120,8 @@ No. The plugin has no author-operated service, telemetry, tracking, advertisemen
 * Added deterministic release packaging, WordPress coding standards, Plugin Check, and CI quality gates
 * Expanded privacy exports and removed customer names and free-text denial details during erasure
 * Prepared canonical licensing, repository links, and WordPress.org submission documentation
+* Added directory artwork, release screenshots, explicit control labels, keyboard-operable settings tabs, and dialog descriptions
+* Removed an unnecessary analytics metadata join and corrected single-page reservation pagination on PHP 8.4
 
 = 1.0.1 - 2026-07-28 =
 

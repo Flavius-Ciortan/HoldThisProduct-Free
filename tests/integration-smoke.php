@@ -108,6 +108,7 @@ include HTP_PLUGIN_PATH . 'templates/modal-template.php';
 $htp_modal_markup   = ob_get_clean();
 $GLOBALS['product'] = $htp_original_product;
 htp_assert( false !== strpos( $htp_modal_markup, 'aria-labelledby="htp-reservation-dialog-title"' ), 'Reservation dialog is associated with its visible heading.' );
+htp_assert( false !== strpos( $htp_modal_markup, 'aria-describedby="htp-reservation-dialog-description"' ), 'Reservation dialog is associated with its explanatory text.' );
 htp_assert( false !== strpos( $htp_modal_markup, 'class="modal-close"' ) && false !== strpos( $htp_modal_markup, 'aria-label="Close reservation dialog"' ), 'Reservation dialog has a keyboard-focusable named close control.' );
 htp_assert( false !== strpos( $htp_modal_markup, 'aria-atomic="true"' ), 'Reservation result notice is exposed as an atomic live region.' );
 $htp_original_post = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
@@ -134,6 +135,22 @@ $htp_immediate_id = $htp_plugin->reservations->create_reservation( $htp_immediat
 htp_assert( $htp_immediate_id && 'active' === get_post_meta( $htp_immediate_id, '_htp_status', true ), 'Immediate reservation activates through the inventory transaction.' );
 $htp_product_name_query = $htp_filtered_method->invoke( $htp_admin_reservations, 'all', 'Immediate reservation test', 'product', 1 );
 htp_assert( in_array( $htp_immediate_id, wp_list_pluck( $htp_product_name_query->posts, 'ID' ), true ), 'Product-name search uses the WordPress query API and returns matching reservations.' );
+$htp_admin_render_deprecations = array();
+set_error_handler(
+	static function ( $severity, $message ) use ( &$htp_admin_render_deprecations ) {
+		if ( E_DEPRECATED === $severity ) {
+			$htp_admin_render_deprecations[] = $message;
+		}
+		return false;
+	},
+	E_DEPRECATED
+);
+ob_start();
+$htp_admin_reservations->render_page();
+$htp_admin_reservations_markup = ob_get_clean();
+restore_error_handler();
+htp_assert( empty( $htp_admin_render_deprecations ), 'Single-page reservation management renders without PHP deprecations.' );
+htp_assert( false !== strpos( $htp_admin_reservations_markup, 'for="status-filter"' ) && false !== strpos( $htp_admin_reservations_markup, 'for="search-type"' ) && false !== strpos( $htp_admin_reservations_markup, 'for="reservation-search"' ), 'Reservation management filters expose programmatic labels.' );
 $htp_counts_after_immediate = $htp_plugin->reservations->get_status_counts();
 htp_assert( $htp_counts_before_immediate[ HTP_Reservation_Status::ACTIVE ] + 1 === $htp_counts_after_immediate[ HTP_Reservation_Status::ACTIVE ], 'Status-count cache is invalidated when a reservation becomes active.' );
 htp_assert( $htp_immediate_product_id === (int) HTP_Reservation_Meta::get( $htp_immediate_id, HTP_Reservation_Meta::PRODUCT_ID ), 'Canonical metadata accessor reads reservation product data.' );

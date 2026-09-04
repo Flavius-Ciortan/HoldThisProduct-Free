@@ -12,9 +12,11 @@ All notable changes to Hold This Product are documented here. The project follow
 - Deterministic release ZIP generation with a checksum.
 - WordPress Coding Standards, PHP compatibility, Plugin Check, and GitHub Actions quality gates.
 - Automated integration, concurrency, activation/deactivation/upgrade/uninstall, HPOS, and exact-artifact test harnesses.
+- A repeatable 5,000-record reservation metadata performance profile.
 - Live verification fixtures for classic checkout, block checkout, customer flow, Shop Manager access, and Administrator access.
 - Reduced-motion handling for frontend and admin plugin controls.
 - Complete WordPress.org submission metadata, privacy disclosures, and canonical licensing.
+- WordPress.org directory icons, banners, and release screenshots with matching readme captions.
 
 ### Changed
 
@@ -27,6 +29,8 @@ All notable changes to Hold This Product are documented here. The project follow
 - Normalized internal filenames and release package folder naming while retaining the historical main plugin filename for upgrade compatibility.
 - Clarified pending-request and active-reservation deadlines throughout the interface.
 - Updated release and user documentation to describe only implemented behavior.
+- Associated settings, filters, and dialog descriptions with their controls for assistive technology, and added keyboard navigation to settings tabs.
+- Removed an unnecessary metadata join from the recent-reservations analytics query.
 
 ### Fixed
 
@@ -44,6 +48,7 @@ All notable changes to Hold This Product are documented here. The project follow
 - Restored stock during uninstall only when the reservation still owned a held unit.
 - Included customer names and related reservation identifiers in privacy exports.
 - Removed stored customer names and free-text denial details during privacy erasure.
+- Avoided passing an absent single-page pagination result into WordPress HTML sanitization on PHP 8.4.
 
 ## 1.0.1 - 2026-07-28
 

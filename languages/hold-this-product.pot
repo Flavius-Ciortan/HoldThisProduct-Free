@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-03T21:49:37+03:00\n"
+"POT-Creation-Date: 2026-09-04T04:47:43+03:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: hold-this-product\n"
@@ -53,7 +53,7 @@ msgid "this product"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:44
-#: includes/admin/class-htp-admin-reservations.php:556
+#: includes/admin/class-htp-admin-reservations.php:560
 msgid "Delete"
 msgstr ""
 
@@ -70,7 +70,7 @@ msgid "Reservation could not be deleted."
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:48
-#: includes/admin/class-htp-admin-reservations.php:535
+#: includes/admin/class-htp-admin-reservations.php:539
 msgid "Approve"
 msgstr ""
 
@@ -92,7 +92,7 @@ msgid "Active"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:53
-#: includes/admin/class-htp-admin-reservations.php:542
+#: includes/admin/class-htp-admin-reservations.php:546
 msgid "Deny"
 msgstr ""
 
@@ -119,20 +119,20 @@ msgid "Please provide a reason for denying this reservation (optional):"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:59
-#: includes/admin/class-htp-admin-reservations.php:549
-#: includes/admin/class-htp-admin.php:591
-#: includes/admin/class-htp-admin.php:648
+#: includes/admin/class-htp-admin-reservations.php:553
+#: includes/admin/class-htp-admin.php:592
+#: includes/admin/class-htp-admin.php:649
 #: templates/myaccount/my-reservations.php:191
 msgid "Cancel"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:60
-#: includes/admin/class-htp-admin.php:646
+#: includes/admin/class-htp-admin.php:647
 msgid "Cancelling..."
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:61
-#: includes/admin/class-htp-admin.php:647
+#: includes/admin/class-htp-admin.php:648
 msgid "Reservation cancelled successfully."
 msgstr ""
 
@@ -143,7 +143,7 @@ msgid "Cancelled"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:63
-#: includes/admin/class-htp-admin.php:649
+#: includes/admin/class-htp-admin.php:650
 msgid "Reservation could not be cancelled."
 msgstr ""
 
@@ -152,7 +152,7 @@ msgid "Missing reservation ID."
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:65
-#: includes/admin/class-htp-admin.php:650
+#: includes/admin/class-htp-admin.php:651
 #: includes/frontend/class-htp-frontend.php:116
 msgid "Request failed. Please try again."
 msgstr ""
@@ -179,106 +179,118 @@ msgstr ""
 msgid "Manage Reservations"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:110
+#: includes/admin/class-htp-admin-reservations.php:109
+msgid "Filter reservations by status"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:111
 msgid "All Statuses"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:117
+msgid "Search reservations by"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:119
 #: includes/class-htp-privacy-service.php:65
 msgid "Email"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:118
+#: includes/admin/class-htp-admin-reservations.php:120
 msgid "Product Name"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:119
+#: includes/admin/class-htp-admin-reservations.php:121
 #: includes/class-htp-privacy-service.php:49
 msgid "Product ID"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:120
-#: includes/admin/class-htp-admin-reservations.php:143
-#: includes/admin/class-htp-admin.php:514
-#: includes/admin/class-htp-analytics.php:168
+#: includes/admin/class-htp-admin-reservations.php:122
+#: includes/admin/class-htp-admin-reservations.php:146
+#: includes/admin/class-htp-admin.php:515
+#: includes/admin/class-htp-analytics.php:169
 msgid "Customer"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:123
-msgid "Search reservations..."
-msgstr ""
-
 #: includes/admin/class-htp-admin-reservations.php:125
-msgid "Filter"
+msgid "Search reservations"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:126
+msgid "Search reservations..."
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:128
+msgid "Filter"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:129
 msgid "Clear"
 msgstr ""
 
 #. translators: %d: number of reservations.
-#: includes/admin/class-htp-admin-reservations.php:130
+#: includes/admin/class-htp-admin-reservations.php:133
 #, php-format
 msgid "%d reservations"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:136
+#: includes/admin/class-htp-admin-reservations.php:139
 msgid "No reservations found matching your criteria."
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:142
-#: includes/admin/class-htp-analytics.php:168
+#: includes/admin/class-htp-admin-reservations.php:145
+#: includes/admin/class-htp-analytics.php:169
 #: templates/myaccount/my-reservations.php:26
 #: templates/myaccount/my-reservations.php:157
 msgid "Product"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:144
-#: includes/admin/class-htp-analytics.php:168
+#: includes/admin/class-htp-admin-reservations.php:147
+#: includes/admin/class-htp-analytics.php:169
 #: includes/class-htp-privacy-service.php:57
 #: templates/myaccount/my-reservations.php:29
 #: templates/myaccount/my-reservations.php:163
 msgid "Status"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:145
+#: includes/admin/class-htp-admin-reservations.php:148
 msgid "Reserved"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:146
-#: includes/admin/class-htp-admin.php:515
-#: includes/admin/class-htp-analytics.php:168
+#: includes/admin/class-htp-admin-reservations.php:149
+#: includes/admin/class-htp-admin.php:516
+#: includes/admin/class-htp-analytics.php:169
 #: includes/class-htp-privacy-service.php:69
 #: templates/myaccount/my-reservations.php:32
 #: templates/myaccount/my-reservations.php:169
 msgid "Expires"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:147
+#: includes/admin/class-htp-admin-reservations.php:150
 #: templates/myaccount/my-reservations.php:35
 #: templates/myaccount/my-reservations.php:178
 msgid "Time Left"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:148
+#: includes/admin/class-htp-admin-reservations.php:151
 #: templates/myaccount/my-reservations.php:38
 #: templates/myaccount/my-reservations.php:183
 msgid "Actions"
 msgstr ""
 
-#: includes/admin/class-htp-admin-reservations.php:470
-#: includes/admin/class-htp-admin-reservations.php:471
+#: includes/admin/class-htp-admin-reservations.php:474
+#: includes/admin/class-htp-admin-reservations.php:475
 msgid "No email"
 msgstr ""
 
 #. translators: %d: reserved product quantity.
-#: includes/admin/class-htp-admin-reservations.php:519
+#: includes/admin/class-htp-admin-reservations.php:523
 #, php-format
 msgid "Quantity %d"
 msgstr ""
 
 #: includes/admin/class-htp-admin.php:40
-#: includes/admin/class-htp-admin.php:354
+#: includes/admin/class-htp-admin.php:355
 msgid "Hold This Product Settings"
 msgstr ""
 
@@ -318,126 +330,130 @@ msgstr ""
 msgid "Require Admin Approval for Reservations"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:130
+#: includes/admin/class-htp-admin.php:131
 msgid "Max reservations must be at least 1."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:133
+#: includes/admin/class-htp-admin.php:134
 msgid "Max reservations cannot exceed 100."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:140
+#: includes/admin/class-htp-admin.php:141
 msgid "Reservation duration must be at least 1 hour."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:143
+#: includes/admin/class-htp-admin.php:144
 msgid "Reservation duration cannot exceed 168 hours."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:152
+#: includes/admin/class-htp-admin.php:153
 msgid "Approval request duration must be at least 1 hour."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:155
+#: includes/admin/class-htp-admin.php:156
 msgid "Approval request duration cannot exceed 168 hours."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:184
+#: includes/admin/class-htp-admin.php:185
 msgid "Popup border radius must be between 0 and 50 pixels."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:188
+#: includes/admin/class-htp-admin.php:189
 msgid "Popup font size must be between 10 and 40 pixels."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:196
+#: includes/admin/class-htp-admin.php:197
 msgid "Popup background color was invalid and has been reset to the default."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:200
+#: includes/admin/class-htp-admin.php:201
 msgid "Popup text color was invalid and has been reset to the default."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:204
+#: includes/admin/class-htp-admin.php:205
 msgid "Popup font family was invalid and has been reset to the default."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:355
+#: includes/admin/class-htp-admin.php:356
 msgid "Manage your product reservation system"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:374
+#: includes/admin/class-htp-admin.php:375
 msgid "Hold This Product Logo"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:390
+#: includes/admin/class-htp-admin.php:388
+msgid "Settings sections"
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:391
 msgid "General Settings"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:394
-#: includes/admin/class-htp-admin.php:420
+#: includes/admin/class-htp-admin.php:395
+#: includes/admin/class-htp-admin.php:421
 msgid "Pop-up Customization"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:407
+#: includes/admin/class-htp-admin.php:408
 msgid "Configuration"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:408
+#: includes/admin/class-htp-admin.php:409
 msgid "Configure the basic settings for your reservation system"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:421
+#: includes/admin/class-htp-admin.php:422
 msgid "Customize the appearance of the reservation pop-up modal"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:432
+#: includes/admin/class-htp-admin.php:433
 msgid "Enable Pop-up Customization"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:441
+#: includes/admin/class-htp-admin.php:442
 msgid "Enable custom styling for the reservation pop-up modal."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:449
+#: includes/admin/class-htp-admin.php:450
 msgid "Border Radius (px)"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:453
+#: includes/admin/class-htp-admin.php:454
 msgid "Background Color"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:457
+#: includes/admin/class-htp-admin.php:458
 msgid "Font Family"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:471
+#: includes/admin/class-htp-admin.php:472
 msgid "Font Size (px)"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:475
+#: includes/admin/class-htp-admin.php:476
 msgid "Text Color"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:485
+#: includes/admin/class-htp-admin.php:486
 msgid "Save Settings"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:507
+#: includes/admin/class-htp-admin.php:508
 #: includes/admin/class-htp-analytics.php:81
 msgid "Active Reservations"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:510
+#: includes/admin/class-htp-admin.php:511
 msgid "No active reservations for this product."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:516
+#: includes/admin/class-htp-admin.php:517
 msgid "Action"
 msgstr ""
 
 #. translators: %s: customer name.
-#: includes/admin/class-htp-admin.php:645
+#: includes/admin/class-htp-admin.php:646
 #, php-format
 msgid "Cancel the reservation for %s?"
 msgstr ""
@@ -487,20 +503,20 @@ msgstr ""
 msgid "Recent Reservations"
 msgstr ""
 
-#: includes/admin/class-htp-analytics.php:163
+#: includes/admin/class-htp-analytics.php:164
 msgid "No reservations found."
 msgstr ""
 
-#: includes/admin/class-htp-analytics.php:168
+#: includes/admin/class-htp-analytics.php:169
 #: includes/class-htp-privacy-service.php:61
 msgid "Created"
 msgstr ""
 
-#: includes/admin/class-htp-analytics.php:178
+#: includes/admin/class-htp-analytics.php:179
 msgid "Unknown Product"
 msgstr ""
 
-#: includes/admin/class-htp-analytics.php:197
+#: includes/admin/class-htp-analytics.php:198
 #: includes/class-htp-reservation-status.php:48
 msgid "Unknown"
 msgstr ""

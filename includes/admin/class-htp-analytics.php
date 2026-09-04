@@ -152,8 +152,9 @@ class HTP_Analytics {
 		$reservations = get_posts(
 			array(
 				'post_type'      => 'htp_reservation',
+				'post_status'    => 'publish',
 				'posts_per_page' => 20,
-				'meta_key'       => HTP_Reservation_Meta::STATUS,
+				'no_found_rows'  => true,
 				'orderby'        => 'date',
 				'order'          => 'DESC',
 			)
