@@ -1,6 +1,6 @@
 # WordPress.org Submission and Release Checklist
 
-This checklist applies to Hold This Product Free 1.1.0.
+This checklist applies to Hold This Product Free 1.0.0.
 
 ## Submission Package
 
@@ -15,7 +15,7 @@ This checklist applies to Hold This Product Free 1.1.0.
 - Required plugin: WooCommerce
 - Minimum WooCommerce: 8.0
 - Tested WooCommerce: 11.0
-- Release version and stable tag: 1.1.0
+- Release version and stable tag: 1.0.0
 
 The final slug is assigned by the WordPress.org Plugin Review team. An exact directory page did not exist when checked on 2026-09-03, but this does not reserve or guarantee the requested slug.
 
@@ -70,7 +70,7 @@ vendor/bin/phpcs
 find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
 find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
 bash bin/build-release.sh
-(cd dist && sha256sum --check hold-this-product-1.1.0.zip.sha256)
+(cd dist && sha256sum --check hold-this-product-1.0.0.zip.sha256)
 ```
 
 - [x] Static syntax and WordPress coding standards pass.
@@ -78,19 +78,19 @@ bash bin/build-release.sh
 - [x] Plugin Check runs against the installed exact ZIP, not the development source tree.
 - [x] Remaining Plugin Check findings are reviewed: only advisory custom-post-type `meta_query` performance warnings remain.
 - [x] A repeatable 5,000-record profile keeps all reviewed reservation metadata queries below 500 ms; the slowest measured operation was 60.11 ms in the local release environment.
-- [x] The exact ZIP installs and activates with WooCommerce on a clean site.
-- [x] The ZIP has one `hold-this-product/` root and excludes tests, CI, Git metadata, Composer tooling, local plans, development ZIPs, and contributor-only documents.
-- [x] The release contents contain only product-related attribution in text and image metadata.
-- [x] A second clean build produces the same SHA-256 checksum.
+- [ ] The exact ZIP installs and activates with WooCommerce on a clean site.
+- [ ] The ZIP has one `hold-this-product/` root and excludes tests, CI, Git metadata, Composer tooling, local plans, development ZIPs, and contributor-only documents.
+- [ ] The release contents contain only product-related attribution in text and image metadata.
+- [ ] A second clean build produces the same SHA-256 checksum.
 
-Verified release candidate: `hold-this-product-1.1.0.zip`
+Verified release candidate: pending the final `1.0.0` archive build.
 
-SHA-256: `c2aec54e9a8abaf919dbbea7134e6d2dccbdb50a4cc33df7ac22bd5d52c2b9e2`
+SHA-256: pending the final deterministic build.
 
 ## Initial Submission
 
 - [ ] Sign in at https://wordpress.org/plugins/developers/add/
-- [ ] Upload the checksum-verified `dist/hold-this-product-1.1.0.zip`.
+- [ ] Upload the checksum-verified `dist/hold-this-product-1.0.0.zip`.
 - [ ] Paste the reviewer overview above and answer review questions accurately.
 - [ ] Do not submit duplicate ZIPs while review is pending.
 - [ ] Respond to review email from the submitting WordPress.org account.
@@ -111,11 +111,11 @@ Icons, banners, and screenshots are optional for initial submission and are not 
 - [ ] Check out the assigned WordPress.org SVN repository.
 - [ ] Copy the exact release contents, without the outer ZIP directory, into SVN `/trunk`.
 - [ ] Copy approved directory artwork into SVN `/assets`.
-- [ ] Create SVN `/tags/1.1.0` from the exact release contents.
+- [ ] Create SVN `/tags/1.0.0` from the exact release contents.
 - [ ] Commit trunk, tag, and assets with the WordPress.org account.
 - [ ] Verify the public directory page, download ZIP, dependency installation, readme formatting, and support forum.
 - [ ] Compare the WordPress.org download package to the approved source contents.
-- [ ] Tag `v1.1.0` in GitHub and publish matching release notes.
+- [ ] Tag `v1.0.0` in GitHub and publish matching release notes.
 - [ ] Install the published WordPress.org package on a clean site and repeat the smoke test.
 
 ## Ongoing Releases

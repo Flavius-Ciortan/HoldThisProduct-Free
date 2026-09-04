@@ -93,14 +93,14 @@ class HTP_Admin_Reservations {
 
 			<div class="htp-reservations-stats">
 				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-					<div><strong>Pending Approval:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::PENDING ] ); ?></div>
-					<div><strong>Active:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::ACTIVE ] ); ?></div>
-					<div><strong>Expired:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::EXPIRED ] ); ?></div>
-					<div><strong>Cancelled:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::CANCELLED ] ); ?></div>
-					<div><strong>Fulfilled:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::FULFILLED ] ); ?></div>
-					<div><strong>Denied:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::DENIED ] ); ?></div>
-					<div><strong>Order Cancelled:</strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::ORDER_CANCELLED ] ); ?></div>
-					<div><strong>Total:</strong> <?php echo esc_html( $stats['total'] ); ?></div>
+					<div><strong><?php esc_html_e( 'Pending Approval:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::PENDING ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Active:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::ACTIVE ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Expired:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::EXPIRED ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Cancelled:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::CANCELLED ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Fulfilled:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::FULFILLED ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Denied:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::DENIED ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Order Cancelled:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats[ HTP_Reservation_Status::ORDER_CANCELLED ] ); ?></div>
+					<div><strong><?php esc_html_e( 'Total:', 'hold-this-product' ); ?></strong> <?php echo esc_html( $stats['total'] ); ?></div>
 				</div>
 			</div>
 

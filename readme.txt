@@ -5,7 +5,7 @@ Tested up to: 7.1
 Requires PHP: 7.4
 WC requires at least: 8.0
 WC tested up to: 11.0
-Stable tag: 1.1.0
+Stable tag: 1.0.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -101,7 +101,7 @@ No. The plugin has no author-operated service, telemetry, tracking, advertisemen
 == Screenshots ==
 
 1. Configure reservation limits, durations, approval workflow, email notifications, and modal appearance.
-2. Offer a clear Reserve Product action alongside WooCommerce purchasing controls.
+2. Offer a clear Reserve action alongside WooCommerce purchasing controls.
 3. Confirm the hold duration in an accessible, keyboard-friendly reservation dialog.
 4. Customers can review deadlines, add reserved items to the cart, or cancel active reservations from My Account.
 5. Manage and filter reservation status, expiry, customer, and stock-hold actions from the WordPress dashboard.
@@ -109,7 +109,7 @@ No. The plugin has no author-operated service, telemetry, tracking, advertisemen
 
 == Changelog ==
 
-= 1.1.0 - 2026-09-03 =
+= 1.0.0 - 2026-09-04 =
 
 * Reworked lifecycle and inventory ownership into transactional, idempotent services
 * Added safe cart-before-reservation linkage and checkout fulfillment without double stock reduction
@@ -117,26 +117,18 @@ No. The plugin has no author-operated service, telemetry, tracking, advertisemen
 * Corrected pending quotas, privacy erasure pagination, order-cancelled handling, and Shop Manager access
 * Added stable service, rule, lifecycle, and notification extension contracts
 * Added HPOS, classic checkout, block checkout, accessibility, role, lifecycle, and exact-artifact verification
+* Completed translatable interface coverage and refreshed the translation catalog
 * Added deterministic release packaging, WordPress coding standards, Plugin Check, and CI quality gates
 * Expanded privacy exports and removed customer names and free-text denial details during erasure
 * Prepared canonical licensing, repository links, and WordPress.org submission documentation
 * Added directory artwork, release screenshots, explicit control labels, keyboard-operable settings tabs, and dialog descriptions
 * Removed an unnecessary analytics metadata join and corrected single-page reservation pagination on PHP 8.4
 
-= 1.0.1 - 2026-07-28 =
-
-* Hardened authorization, validation, settings sanitization, and stock state handling
-* Added scheduled expiration, privacy tools, pagination, and compatibility declarations
-
-= 1.0.0 - 2025-11-12 =
-
-* Initial public release
-
 == Upgrade Notice ==
 
-= 1.1.0 =
+= 1.0.0 =
 
-Recommended reliability update for reservation lifecycle, inventory ownership, checkout compatibility, and release quality.
+Initial public release of the reservation lifecycle, inventory, checkout, and merchant-management workflow.
 
 == Support ==
 

@@ -2,14 +2,14 @@
 # This file is distributed under the GPL v3 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Hold This Product 1.1.0\n"
+"Project-Id-Version: Hold This Product 1.0.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/hold-this-product\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-04T04:47:43+03:00\n"
+"POT-Creation-Date: 2026-09-04T18:23:56+03:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: hold-this-product\n"
@@ -120,19 +120,19 @@ msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:59
 #: includes/admin/class-htp-admin-reservations.php:553
-#: includes/admin/class-htp-admin.php:592
-#: includes/admin/class-htp-admin.php:649
+#: includes/admin/class-htp-admin.php:604
+#: includes/admin/class-htp-admin.php:661
 #: templates/myaccount/my-reservations.php:191
 msgid "Cancel"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:60
-#: includes/admin/class-htp-admin.php:647
+#: includes/admin/class-htp-admin.php:659
 msgid "Cancelling..."
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:61
-#: includes/admin/class-htp-admin.php:648
+#: includes/admin/class-htp-admin.php:660
 msgid "Reservation cancelled successfully."
 msgstr ""
 
@@ -143,7 +143,7 @@ msgid "Cancelled"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:63
-#: includes/admin/class-htp-admin.php:650
+#: includes/admin/class-htp-admin.php:662
 msgid "Reservation could not be cancelled."
 msgstr ""
 
@@ -152,8 +152,8 @@ msgid "Missing reservation ID."
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:65
-#: includes/admin/class-htp-admin.php:651
-#: includes/frontend/class-htp-frontend.php:116
+#: includes/admin/class-htp-admin.php:663
+#: includes/frontend/class-htp-frontend.php:174
 msgid "Request failed. Please try again."
 msgstr ""
 
@@ -177,6 +177,38 @@ msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:92
 msgid "Manage Reservations"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:96
+msgid "Pending Approval:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:97
+msgid "Active:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:98
+msgid "Expired:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:99
+msgid "Cancelled:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:100
+msgid "Fulfilled:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:101
+msgid "Denied:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:102
+msgid "Order Cancelled:"
+msgstr ""
+
+#: includes/admin/class-htp-admin-reservations.php:103
+msgid "Total:"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:109
@@ -207,7 +239,7 @@ msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:122
 #: includes/admin/class-htp-admin-reservations.php:146
-#: includes/admin/class-htp-admin.php:515
+#: includes/admin/class-htp-admin.php:527
 #: includes/admin/class-htp-analytics.php:169
 msgid "Customer"
 msgstr ""
@@ -258,7 +290,7 @@ msgid "Reserved"
 msgstr ""
 
 #: includes/admin/class-htp-admin-reservations.php:149
-#: includes/admin/class-htp-admin.php:516
+#: includes/admin/class-htp-admin.php:528
 #: includes/admin/class-htp-analytics.php:169
 #: includes/class-htp-privacy-service.php:69
 #: templates/myaccount/my-reservations.php:32
@@ -290,7 +322,7 @@ msgid "Quantity %d"
 msgstr ""
 
 #: includes/admin/class-htp-admin.php:40
-#: includes/admin/class-htp-admin.php:355
+#: includes/admin/class-htp-admin.php:367
 msgid "Hold This Product Settings"
 msgstr ""
 
@@ -374,86 +406,116 @@ msgstr ""
 msgid "Popup font family was invalid and has been reset to the default."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:356
+#: includes/admin/class-htp-admin.php:264
+msgid "Enable product reservations across your store."
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:280
+msgid "Limit how many active reservations a user can have at once."
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:298
+msgid "How long reservations last (1-168 hours, default: 24)."
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:314
+msgid "How long an approval request remains open. The active reservation duration starts when it is approved."
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:333
+msgid "Send email confirmations and status updates to customers."
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:352
+msgid "Reservations require admin approval before becoming active."
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:368
 msgid "Manage your product reservation system"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:375
+#: includes/admin/class-htp-admin.php:387
 msgid "Hold This Product Logo"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:388
+#. translators: %s: comma-separated logo filenames.
+#: includes/admin/class-htp-admin.php:389
+#, php-format
+msgid "No logo file found. Checked: %s"
+msgstr ""
+
+#: includes/admin/class-htp-admin.php:400
 msgid "Settings sections"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:391
+#: includes/admin/class-htp-admin.php:403
 msgid "General Settings"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:395
-#: includes/admin/class-htp-admin.php:421
+#: includes/admin/class-htp-admin.php:407
+#: includes/admin/class-htp-admin.php:433
 msgid "Pop-up Customization"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:408
+#: includes/admin/class-htp-admin.php:420
 msgid "Configuration"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:409
+#: includes/admin/class-htp-admin.php:421
 msgid "Configure the basic settings for your reservation system"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:422
+#: includes/admin/class-htp-admin.php:434
 msgid "Customize the appearance of the reservation pop-up modal"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:433
+#: includes/admin/class-htp-admin.php:445
 msgid "Enable Pop-up Customization"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:442
+#: includes/admin/class-htp-admin.php:454
 msgid "Enable custom styling for the reservation pop-up modal."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:450
+#: includes/admin/class-htp-admin.php:462
 msgid "Border Radius (px)"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:454
+#: includes/admin/class-htp-admin.php:466
 msgid "Background Color"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:458
+#: includes/admin/class-htp-admin.php:470
 msgid "Font Family"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:472
+#: includes/admin/class-htp-admin.php:484
 msgid "Font Size (px)"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:476
+#: includes/admin/class-htp-admin.php:488
 msgid "Text Color"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:486
+#: includes/admin/class-htp-admin.php:498
 msgid "Save Settings"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:508
+#: includes/admin/class-htp-admin.php:520
 #: includes/admin/class-htp-analytics.php:81
 msgid "Active Reservations"
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:511
+#: includes/admin/class-htp-admin.php:523
 msgid "No active reservations for this product."
 msgstr ""
 
-#: includes/admin/class-htp-admin.php:517
+#: includes/admin/class-htp-admin.php:529
 msgid "Action"
 msgstr ""
 
 #. translators: %s: customer name.
-#: includes/admin/class-htp-admin.php:646
+#: includes/admin/class-htp-admin.php:658
 #, php-format
 msgid "Cancel the reservation for %s?"
 msgstr ""
@@ -762,7 +824,7 @@ msgid "A valid verified email address is required."
 msgstr ""
 
 #: includes/class-htp-reservation-lifecycle.php:62
-#: includes/frontend/class-htp-frontend.php:71
+#: includes/frontend/class-htp-frontend.php:72
 msgid "Reservations are not available for this product."
 msgstr ""
 
@@ -863,48 +925,48 @@ msgstr ""
 msgid "You have no reservations."
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:69
+#: includes/frontend/class-htp-frontend.php:70
 msgid "Please"
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:69
+#: includes/frontend/class-htp-frontend.php:70
 msgid "log in"
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:69
+#: includes/frontend/class-htp-frontend.php:70
 msgid "or"
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:69
+#: includes/frontend/class-htp-frontend.php:70
 msgid "create an account"
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:69
+#: includes/frontend/class-htp-frontend.php:70
 msgid "to reserve this product."
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:111
+#: includes/frontend/class-htp-frontend.php:169
 msgid "Please log in to reserve products."
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:112
+#: includes/frontend/class-htp-frontend.php:170
 msgid "Please choose a product variation before reserving."
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:113
+#: includes/frontend/class-htp-frontend.php:171
 msgid "Processing..."
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:114
+#: includes/frontend/class-htp-frontend.php:172
 msgid "Reservation successful!"
 msgstr ""
 
-#: includes/frontend/class-htp-frontend.php:115
+#: includes/frontend/class-htp-frontend.php:173
 msgid "Error:"
 msgstr ""
 
 #: templates/form-template.php:41
-msgid "Reserve Product"
+msgid "Reserve"
 msgstr ""
 
 #: templates/modal-template.php:74

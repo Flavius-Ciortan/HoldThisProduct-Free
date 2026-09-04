@@ -38,6 +38,6 @@ $show_button = $globally_on && ( is_user_logged_in() || apply_filters( 'htp_gues
 		data-productid="<?php echo esc_attr( $pid ); ?>"
 		data-product-type="<?php echo esc_attr( $product->get_type() ); ?>"
 	>
-		<?php esc_html_e( 'Reserve Product', 'hold-this-product' ); ?>
+		<?php esc_html_e( 'Reserve', 'hold-this-product' ); ?>
 	</button>
 <?php endif; ?>

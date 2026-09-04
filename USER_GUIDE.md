@@ -1,6 +1,6 @@
 # Hold This Product User Guide
 
-This guide applies to Hold This Product Free 1.1.0.
+This guide applies to Hold This Product Free 1.0.0.
 
 ## Requirements
 
@@ -47,7 +47,7 @@ The modal includes a semantic dialog, keyboard focus containment, Escape-to-clos
 ### Immediate Reservations
 
 1. The customer signs in and opens an eligible product.
-2. The customer selects **Reserve Product** and confirms the request.
+2. The customer selects **Reserve** and confirms the request.
 3. The reservation becomes **Active** and stock decreases by one.
 4. The customer can open **My Account > Reserved products**, cancel the hold, or add it to the cart.
 5. Checkout marks the linked reservation **Purchased** without reducing the held unit a second time.

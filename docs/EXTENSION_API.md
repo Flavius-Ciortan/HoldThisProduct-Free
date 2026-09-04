@@ -1,6 +1,6 @@
 # Hold This Product Extension API
 
-This document describes the public contracts available to compatible add-ons in Hold This Product Free 1.1.0. Add-ons should require Free, wait for `htp_plugin_loaded`, and use these contracts instead of duplicating reservation or inventory logic.
+This document describes the public contracts available to compatible add-ons in Hold This Product Free 1.0.0. Add-ons should require Free, wait for `htp_plugin_loaded`, and use these contracts instead of duplicating reservation or inventory logic.
 
 ## Bootstrap
 

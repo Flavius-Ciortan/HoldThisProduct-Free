@@ -2,7 +2,7 @@
 
 All notable changes to Hold This Product are documented here. The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semantic versioning.
 
-## 1.1.0 - 2026-09-03
+## 1.0.0 - 2026-09-04
 
 ### Added
 
@@ -16,6 +16,7 @@ All notable changes to Hold This Product are documented here. The project follow
 - Live verification fixtures for classic checkout, block checkout, customer flow, Shop Manager access, and Administrator access.
 - Reduced-motion handling for frontend and admin plugin controls.
 - Complete WordPress.org submission metadata, privacy disclosures, and canonical licensing.
+- Complete translation coverage and an up-to-date `hold-this-product` POT catalog.
 - WordPress.org directory icons, banners, and release screenshots with matching readme captions.
 
 ### Changed
@@ -29,6 +30,7 @@ All notable changes to Hold This Product are documented here. The project follow
 - Normalized internal filenames and release package folder naming while retaining the historical main plugin filename for upgrade compatibility.
 - Clarified pending-request and active-reservation deadlines throughout the interface.
 - Updated release and user documentation to describe only implemented behavior.
+- Positioned the concise Reserve action beside Add to cart on desktop and directly below it on narrow screens, including block-based product templates.
 - Associated settings, filters, and dialog descriptions with their controls for assistive technology, and added keyboard navigation to settings tabs.
 - Removed an unnecessary metadata join from the recent-reservations analytics query.
 
@@ -49,24 +51,3 @@ All notable changes to Hold This Product are documented here. The project follow
 - Included customer names and related reservation identifiers in privacy exports.
 - Removed stored customer names and free-text denial details during privacy erasure.
 - Avoided passing an absent single-page pagination result into WordPress HTML sanitization on PHP 8.4.
-
-## 1.0.1 - 2026-07-28
-
-### Changed
-
-- Hardened reservation authorization, validation, and settings sanitization.
-- Improved compatibility declarations, translations, pagination, accessibility, privacy integration, and release metadata.
-
-### Fixed
-
-- Improved stock idempotency across reservation, approval, cancellation, expiration, and checkout paths.
-
-## 1.0.0 - 2025-11-12
-
-### Added
-
-- Initial reservation workflow for logged-in customers and stock-managed simple products.
-- Automatic expiration and stock restoration.
-- My Account reservation management.
-- Merchant settings, reservation dashboard, basic analytics, and product-level active reservations.
-- Optional approval workflow, email notifications, modal customization, and per-customer limits.

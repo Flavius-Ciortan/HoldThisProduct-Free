@@ -329,51 +329,46 @@ label[for="rez_check"] {
     text-decoration: underline;
 }
 
-/* Button */
-/* .button_container {
-    text-align: center;
-    margin-top: 20px;
-} */
-
-/* #htp_reserve_product {
-    background-color: #0073aa;
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    font-size: 14px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 500;
-}
-
-#htp_reserve_product:hover {
-    background-color: #005f8d;
-} */
-
-
-/* #htp_reserve_product:hover {
-    margin: 0 !important;
-} */
-
-
 .woocommerce div.product form.cart button.single_add_to_cart_button {
     margin-bottom: 10px;
     margin-right: 10px;
 }
 
-
-.wc-block-add-to-cart-form {
+.woocommerce div.product .wc-block-add-to-cart-form.htp-has-reserve-action {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-/* .wc-block-add-to-cart-form #htp_reserve_product,
-.wc-block-add-to-cart-form form {
-    margin: 0 !important;
-} */
+.woocommerce div.product .wc-block-add-to-cart-form form.htp-cart-actions {
+    grid-template-columns: auto max-content max-content;
+    column-gap: 10px;
+}
+
+.woocommerce div.product .wc-block-add-to-cart-form form.htp-cart-actions #htp_reserve_product {
+    grid-column: 3 / 4;
+    margin-right: 0;
+}
+
+@media (max-width: 600px) {
+    .woocommerce div.product .wc-block-add-to-cart-form.htp-has-reserve-action {
+        display: block;
+    }
+
+    .woocommerce div.product .wc-block-add-to-cart-form form.htp-cart-actions {
+        grid-template-columns: auto 1fr;
+        width: 100%;
+    }
+
+    .woocommerce div.product .wc-block-add-to-cart-form form.htp-cart-actions #htp_reserve_product {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin: 10px 0 0;
+    }
+}
 
 /* Reservation Modal */
 .htp-modal-overlay.modal-overlay {

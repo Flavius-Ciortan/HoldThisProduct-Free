@@ -253,15 +253,17 @@ class HTP_Admin {
 	public function holdthisproduct_enable_reservation_callback() {
 		$options = get_option( 'holdthisproduct_options' );
 		$checked = ! empty( $options['enable_reservation'] ) ? 'checked' : '';
-		echo '<div class="htp-setting-field">
-                <div class="htp-setting-control">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="holdthisproduct_enable_reservation" name="holdthisproduct_options[enable_reservation]" value="1" ' . esc_attr( $checked ) . '>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <p class="description">Enable product reservations across your store.</p>
-              </div>';
+		?>
+		<div class="htp-setting-field">
+			<div class="htp-setting-control">
+				<label class="toggle-switch">
+					<input type="checkbox" id="holdthisproduct_enable_reservation" name="holdthisproduct_options[enable_reservation]" value="1" <?php echo esc_attr( $checked ); ?>>
+					<span class="slider"></span>
+				</label>
+			</div>
+			<p class="description"><?php esc_html_e( 'Enable product reservations across your store.', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
 	}
 
 	/**
@@ -270,12 +272,14 @@ class HTP_Admin {
 	public function holdthisproduct_max_reservations_callback() {
 		$options = get_option( 'holdthisproduct_options' );
 		$value   = isset( $options['max_reservations'] ) ? absint( $options['max_reservations'] ) : 1;
-		echo '<div class="htp-setting-field">
-                <div class="htp-setting-control">
-                    <input type="number" id="holdthisproduct_max_reservations" name="holdthisproduct_options[max_reservations]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
-                </div>
-                <p class="description">Limit how many active reservations a user can have at once.</p>
-              </div>';
+		?>
+		<div class="htp-setting-field">
+			<div class="htp-setting-control">
+				<input type="number" id="holdthisproduct_max_reservations" name="holdthisproduct_options[max_reservations]" value="<?php echo esc_attr( $value ); ?>" class="holdthisproduct-small-input" />
+			</div>
+			<p class="description"><?php esc_html_e( 'Limit how many active reservations a user can have at once.', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
 	}
 
 	/**
@@ -284,28 +288,32 @@ class HTP_Admin {
 	public function holdthisproduct_reservation_duration_callback() {
 		$options = get_option( 'holdthisproduct_options' );
 		$value   = isset( $options['reservation_duration'] ) ? absint( $options['reservation_duration'] ) : 24;
-		echo '<div class="htp-setting-field">
-                <div class="htp-setting-control">
-                    <div class="htp-input-right-align">
-                        <input type="number" id="holdthisproduct_reservation_duration" name="holdthisproduct_options[reservation_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
-                    </div>
-                </div>
-                <p class="description">How long reservations last (1-168 hours, default: 24)</p>
-              </div>';
+		?>
+		<div class="htp-setting-field">
+			<div class="htp-setting-control">
+				<div class="htp-input-right-align">
+					<input type="number" id="holdthisproduct_reservation_duration" name="holdthisproduct_options[reservation_duration]" value="<?php echo esc_attr( $value ); ?>" class="holdthisproduct-small-input" />
+				</div>
+			</div>
+			<p class="description"><?php esc_html_e( 'How long reservations last (1-168 hours, default: 24).', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
 	}
 
 	/** Approval request duration field callback. */
 	public function holdthisproduct_pending_duration_callback() {
 		$options = get_option( 'holdthisproduct_options', array() );
 		$value   = isset( $options['pending_duration'] ) ? absint( $options['pending_duration'] ) : 24;
-		echo '<div class="htp-setting-field">
-                <div class="htp-setting-control">
-                    <div class="htp-input-right-align">
-                        <input type="number" id="holdthisproduct_pending_duration" min="1" max="168" name="holdthisproduct_options[pending_duration]" value="' . esc_attr( $value ) . '" class="holdthisproduct-small-input" />
-                    </div>
-                </div>
-                <p class="description">How long an approval request remains open. The active reservation duration starts when it is approved.</p>
-              </div>';
+		?>
+		<div class="htp-setting-field">
+			<div class="htp-setting-control">
+				<div class="htp-input-right-align">
+					<input type="number" id="holdthisproduct_pending_duration" min="1" max="168" name="holdthisproduct_options[pending_duration]" value="<?php echo esc_attr( $value ); ?>" class="holdthisproduct-small-input" />
+				</div>
+			</div>
+			<p class="description"><?php esc_html_e( 'How long an approval request remains open. The active reservation duration starts when it is approved.', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
 	}
 
 	/**
@@ -314,15 +322,17 @@ class HTP_Admin {
 	public function holdthisproduct_enable_email_notifications_callback() {
 		$options = get_option( 'holdthisproduct_options' );
 		$checked = ! empty( $options['enable_email_notifications'] ) ? 'checked' : '';
-		echo '<div class="htp-setting-field">
-                <div class="htp-setting-control">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="holdthisproduct_enable_email_notifications" name="holdthisproduct_options[enable_email_notifications]" value="1" ' . esc_attr( $checked ) . '>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <p class="description">Send email confirmations and status updates to customers.</p>
-              </div>';
+		?>
+		<div class="htp-setting-field">
+			<div class="htp-setting-control">
+				<label class="toggle-switch">
+					<input type="checkbox" id="holdthisproduct_enable_email_notifications" name="holdthisproduct_options[enable_email_notifications]" value="1" <?php echo esc_attr( $checked ); ?>>
+					<span class="slider"></span>
+				</label>
+			</div>
+			<p class="description"><?php esc_html_e( 'Send email confirmations and status updates to customers.', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
 	}
 
 	/**
@@ -331,15 +341,17 @@ class HTP_Admin {
 	public function holdthisproduct_require_admin_approval_callback() {
 		$options = get_option( 'holdthisproduct_options' );
 		$checked = ! empty( $options['require_admin_approval'] ) ? 'checked' : '';
-		echo '<div class="htp-setting-field">
-                <div class="htp-setting-control">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="holdthisproduct_require_admin_approval" name="holdthisproduct_options[require_admin_approval]" value="1" ' . esc_attr( $checked ) . '>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <p class="description">Reservations require admin approval before becoming active.</p>
-              </div>';
+		?>
+		<div class="htp-setting-field">
+			<div class="htp-setting-control">
+				<label class="toggle-switch">
+					<input type="checkbox" id="holdthisproduct_require_admin_approval" name="holdthisproduct_options[require_admin_approval]" value="1" <?php echo esc_attr( $checked ); ?>>
+					<span class="slider"></span>
+				</label>
+			</div>
+			<p class="description"><?php esc_html_e( 'Reservations require admin approval before becoming active.', 'hold-this-product' ); ?></p>
+		</div>
+		<?php
 	}
 
 	/**
@@ -374,7 +386,7 @@ class HTP_Admin {
 							?>
 							<img src="<?php echo esc_url( $logo_src ); ?>" alt="<?php esc_attr_e( 'Hold This Product Logo', 'hold-this-product' ); ?>" class="htp-logo">
 						<?php else : ?>
-							<div class="htp-logo htp-logo-fallback" title="No logo file found. Checked: <?php echo esc_attr( implode( ', ', $logo_files ) ); ?>">HTP</div>
+							<div class="htp-logo htp-logo-fallback" title="<?php echo esc_attr( sprintf( /* translators: %s: comma-separated logo filenames. */ __( 'No logo file found. Checked: %s', 'hold-this-product' ), implode( ', ', $logo_files ) ) ); ?>">HTP</div>
 						<?php endif; ?>
 					</div>
 				</div>

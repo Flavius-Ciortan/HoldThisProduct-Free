@@ -40,7 +40,8 @@ class HTP_Frontend {
 		// Render next to the Add to cart button on single product pages.
 		add_action( 'woocommerce_after_add_to_cart_button', array( $this, 'display_reservation_form' ) );
 		// Sold-out products may not render an add-to-cart form; Pro waitlists use this fallback.
-		add_action( 'woocommerce_single_product_summary', array( $this, 'display_reservation_form' ), 31 );
+		add_action( 'woocommerce_single_product_summary', array( $this, 'display_reservation_fallback' ), 31 );
+		add_filter( 'render_block_woocommerce/add-to-cart-form', array( $this, 'add_reservation_block_classes' ), 10, 2 );
 
 		// Render modal markup outside WooCommerce's form.cart to avoid nested <form> issues.
 		add_action( 'wp_footer', array( $this, 'display_reservation_modal' ) );
@@ -75,6 +76,63 @@ class HTP_Frontend {
 
 		$this->did_render_form = true;
 		$this->include_form_template();
+	}
+
+	/**
+	 * Render only when WooCommerce has no normal in-stock Add to Cart form.
+	 *
+	 * Block themes render their dynamic Add to Cart block after the summary
+	 * compatibility hook. Let that block trigger the standard button hook so the
+	 * reservation action remains inside the cart form.
+	 */
+	public function display_reservation_fallback() {
+		global $product;
+
+		if ( $this->did_render_form ) {
+			return;
+		}
+
+		if ( $product instanceof WC_Product && $product->is_purchasable() && $product->is_in_stock() ) {
+			return;
+		}
+
+		$this->display_reservation_form();
+	}
+
+	/**
+	 * Add stable classes to reservation-enabled WooCommerce Add to Cart blocks.
+	 *
+	 * @param string $block_content Rendered block markup.
+	 * @param array  $block         Parsed block data.
+	 * @return string
+	 */
+	public function add_reservation_block_classes( $block_content, $block ) {
+		unset( $block );
+
+		if ( false === strpos( $block_content, 'id="htp_reserve_product"' ) || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+			return $block_content;
+		}
+
+		$processor = new WP_HTML_Tag_Processor( $block_content );
+		if ( $processor->next_tag(
+			array(
+				'tag_name'   => 'DIV',
+				'class_name' => 'wc-block-add-to-cart-form',
+			)
+		) ) {
+			$processor->add_class( 'htp-has-reserve-action' );
+		}
+
+		if ( $processor->next_tag(
+			array(
+				'tag_name'   => 'FORM',
+				'class_name' => 'cart',
+			)
+		) ) {
+			$processor->add_class( 'htp-cart-actions' );
+		}
+
+		return $processor->get_updated_html();
 	}
 
 	/**

@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require $wp_load;
 }
 
-$htp_failures = array();
+$GLOBALS['htp_failures'] = array();
 function htp_assert( $condition, $message ) {
 	global $htp_failures;
 	if ( ! $condition ) {
@@ -24,6 +24,7 @@ function htp_assert( $condition, $message ) {
 
 $htp_plugin = HoldThisProduct::get_instance();
 $htp_original_options = get_option( 'holdthisproduct_options', false );
+htp_assert( '1.0.0' === HTP_VERSION, 'Runtime version matches the initial public release.' );
 htp_assert( $htp_plugin->reservations instanceof HTP_Reservations, 'Reservation service initialized.' );
 htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_Repository, 'Reservation repository is registered.' );
 htp_assert( $htp_plugin->get_service( 'cart_order' ) instanceof HTP_Cart_Order_Service, 'Cart and order service is registered.' );
@@ -32,7 +33,11 @@ htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_
 htp_assert( $htp_plugin->get_service( 'lifecycle' ) instanceof HTP_Reservation_Lifecycle_Interface, 'Lifecycle implements its extension contract.' );
 htp_assert( $htp_plugin->get_service( 'rules' ) instanceof HTP_Reservation_Rules, 'Reservation rules service is registered.' );
 htp_assert( $htp_plugin->get_service( 'locks' ) instanceof HTP_Lock_Manager, 'Reservation lock service is registered.' );
-htp_assert( false !== has_action( 'woocommerce_single_product_summary', array( $htp_plugin->frontend, 'display_reservation_form' ) ), 'Frontend has a deduplicated sold-out product fallback for add-on waitlists.' );
+htp_assert( false !== has_action( 'woocommerce_single_product_summary', array( $htp_plugin->frontend, 'display_reservation_fallback' ) ), 'Frontend has a dedicated sold-out product fallback for add-on waitlists.' );
+htp_assert( false !== has_filter( 'render_block_woocommerce/add-to-cart-form', array( $htp_plugin->frontend, 'add_reservation_block_classes' ) ), 'Frontend registers block Add to Cart layout integration.' );
+$htp_block_markup = '<div class="wp-block-add-to-cart-form wc-block-add-to-cart-form"><form class="cart"><button id="htp_reserve_product" type="button">Reserve</button></form></div>';
+$htp_block_markup = $htp_plugin->frontend->add_reservation_block_classes( $htp_block_markup, array() );
+htp_assert( false !== strpos( $htp_block_markup, 'htp-has-reserve-action' ) && false !== strpos( $htp_block_markup, 'htp-cart-actions' ), 'Reservation-enabled Add to Cart blocks receive stable layout classes.' );
 $htp_dependency_notices = $htp_plugin->get_service( 'dependency_notices' );
 htp_assert( $htp_dependency_notices instanceof HTP_Dependency_Notices, 'Add-on dependency notice service is registered.' );
 htp_assert( $htp_dependency_notices->add( 'htp-contract-test', 'Dependency contract test.', 'warning' ) && isset( $htp_dependency_notices->all()['htp-contract-test'] ), 'Add-ons can register a dependency notice through the shared contract.' );
@@ -101,12 +106,50 @@ $htp_immediate_product->set_regular_price( '10' );
 $htp_immediate_product->set_manage_stock( true );
 $htp_immediate_product->set_stock_quantity( 2 );
 $htp_immediate_product_id = $htp_immediate_product->save();
-$htp_original_product = $GLOBALS['product'] ?? null;
-$GLOBALS['product']   = wc_get_product( $htp_immediate_product_id );
+$htp_original_product       = $GLOBALS['product'] ?? null;
+$htp_original_query_object  = $GLOBALS['wp_query']->queried_object;
+$htp_original_query_id      = $GLOBALS['wp_query']->queried_object_id;
+$htp_original_is_singular   = $GLOBALS['wp_query']->is_singular;
+$GLOBALS['product']         = wc_get_product( $htp_immediate_product_id );
+$GLOBALS['wp_query']->queried_object    = get_post( $htp_immediate_product_id );
+$GLOBALS['wp_query']->queried_object_id = $htp_immediate_product_id;
+$GLOBALS['wp_query']->is_singular       = true;
+ob_start();
+$htp_plugin->frontend->display_reservation_fallback();
+$htp_in_stock_fallback_markup = ob_get_clean();
+htp_assert( '' === $htp_in_stock_fallback_markup, 'In-stock products wait for the standard Add to Cart button hook.' );
+ob_start();
+include HTP_PLUGIN_PATH . 'templates/form-template.php';
+$htp_reserve_button_markup = ob_get_clean();
+htp_assert( 1 === preg_match( '/>\s*Reserve\s*<\/button>/', $htp_reserve_button_markup ), 'The product action uses the concise Reserve label.' );
+$htp_waitlist_product = new WC_Product_Simple();
+$htp_waitlist_product->set_name( 'Waitlist fallback test product' );
+$htp_waitlist_product->set_status( 'publish' );
+$htp_waitlist_product->set_regular_price( '10' );
+$htp_waitlist_product->set_manage_stock( true );
+$htp_waitlist_product->set_stock_quantity( 0 );
+$htp_waitlist_product->set_stock_status( 'outofstock' );
+$htp_waitlist_product_id = $htp_waitlist_product->save();
+$htp_waitlist_eligibility = static function ( $reservable, $product ) use ( $htp_waitlist_product_id ) {
+	return $product instanceof WC_Product && $htp_waitlist_product_id === $product->get_id() ? true : $reservable;
+};
+add_filter( 'htp_product_is_reservable', $htp_waitlist_eligibility, 10, 2 );
+$GLOBALS['product'] = wc_get_product( $htp_waitlist_product_id );
+$GLOBALS['wp_query']->queried_object    = get_post( $htp_waitlist_product_id );
+$GLOBALS['wp_query']->queried_object_id = $htp_waitlist_product_id;
+ob_start();
+$htp_plugin->frontend->display_reservation_fallback();
+$htp_waitlist_fallback_markup = ob_get_clean();
+remove_filter( 'htp_product_is_reservable', $htp_waitlist_eligibility, 10 );
+htp_assert( 1 === preg_match( '/>\s*Reserve\s*<\/button>/', $htp_waitlist_fallback_markup ), 'Extension-enabled sold-out products retain the dedicated fallback action.' );
+$GLOBALS['product'] = wc_get_product( $htp_immediate_product_id );
 ob_start();
 include HTP_PLUGIN_PATH . 'templates/modal-template.php';
 $htp_modal_markup   = ob_get_clean();
-$GLOBALS['product'] = $htp_original_product;
+$GLOBALS['product']                     = $htp_original_product;
+$GLOBALS['wp_query']->queried_object    = $htp_original_query_object;
+$GLOBALS['wp_query']->queried_object_id = $htp_original_query_id;
+$GLOBALS['wp_query']->is_singular       = $htp_original_is_singular;
 htp_assert( false !== strpos( $htp_modal_markup, 'aria-labelledby="htp-reservation-dialog-title"' ), 'Reservation dialog is associated with its visible heading.' );
 htp_assert( false !== strpos( $htp_modal_markup, 'aria-describedby="htp-reservation-dialog-description"' ), 'Reservation dialog is associated with its explanatory text.' );
 htp_assert( false !== strpos( $htp_modal_markup, 'class="modal-close"' ) && false !== strpos( $htp_modal_markup, 'aria-label="Close reservation dialog"' ), 'Reservation dialog has a keyboard-focusable named close control.' );
@@ -427,6 +470,7 @@ foreach ( $htp_privacy_ids as $htp_privacy_id ) {
 wp_delete_post( $htp_delete_reservation_id, true );
 wp_delete_post( $htp_product_id, true );
 wp_delete_post( $htp_immediate_product_id, true );
+wp_delete_post( $htp_waitlist_product_id, true );
 $htp_quantity_order->delete( true );
 $htp_variation_order->delete( true );
 wp_delete_post( $htp_quantity_id, true );
@@ -448,5 +492,5 @@ if ( false === $htp_original_options ) {
 } else {
 	update_option( 'holdthisproduct_options', $htp_original_options );
 }
-if ( $htp_failures ) exit( 1 );
+if ( ! empty( $GLOBALS['htp_failures'] ) ) exit( 1 );
 echo esc_html( "All integration assertions passed.\n" );
