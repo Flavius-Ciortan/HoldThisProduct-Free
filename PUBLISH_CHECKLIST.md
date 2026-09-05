@@ -21,11 +21,11 @@ The final slug is assigned by the WordPress.org Plugin Review team. An exact dir
 
 ## Account Prerequisites
 
-- [ ] Create or verify the WordPress.org account that will submit and maintain the plugin.
-- [ ] Decide whether to list any WordPress.org account IDs in a future `Contributors:` field. The field is intentionally omitted from this release metadata.
-- [ ] Use a monitored email address on the WordPress.org account.
-- [ ] Allow email from `plugins@wordpress.org` so review messages are not lost.
-- [ ] Ensure every person named as a contributor has approved the GPL-3.0-or-later distribution terms.
+- [x] Create or verify the WordPress.org account that will submit and maintain the plugin.
+- [x] Keep the `Contributors:` field omitted from this release metadata so no individual accounts are named.
+- [x] Use a monitored email address on the WordPress.org account.
+- [x] Allow and label email from `plugins@wordpress.org` so review messages are not lost.
+- [x] No people are named as contributors, so no additional contributor approval is required for this release.
 
 Only WordPress.org account IDs belong in `Contributors:`. Repository usernames and display names are not interchangeable with WordPress.org IDs. WordPress.org can still publicly associate the submitting account with the plugin even when this field is omitted.
 
@@ -78,14 +78,14 @@ bash bin/build-release.sh
 - [x] Plugin Check runs against the installed exact ZIP, not the development source tree.
 - [x] Remaining Plugin Check findings are reviewed: only advisory custom-post-type `meta_query` performance warnings remain.
 - [x] A repeatable 5,000-record profile keeps all reviewed reservation metadata queries below 500 ms; the slowest measured operation was 60.11 ms in the local release environment.
-- [ ] The exact ZIP installs and activates with WooCommerce on a clean site.
-- [ ] The ZIP has one `hold-this-product/` root and excludes tests, CI, Git metadata, Composer tooling, local plans, development ZIPs, and contributor-only documents.
-- [ ] The release contents contain only product-related attribution in text and image metadata.
-- [ ] A second clean build produces the same SHA-256 checksum.
+- [x] The exact ZIP installs and activates with WooCommerce on a clean site.
+- [x] The ZIP has one `hold-this-product/` root and excludes tests, CI, Git metadata, Composer tooling, local plans, development ZIPs, and contributor-only documents.
+- [x] The release contents contain only product-related attribution in text and image metadata.
+- [x] A second clean build produces the same SHA-256 checksum.
 
-Verified release candidate: pending the final `1.0.0` archive build.
+Verified release candidate: `dist/hold-this-product-1.0.0.zip` (verified 2026-09-05).
 
-SHA-256: pending the final deterministic build.
+SHA-256: `99f17c880c5a3e18be2127667151540f537cad612e7c4bd8c5d66fd066b33f2d`
 
 ## Initial Submission
 
