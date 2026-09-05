@@ -26,7 +26,8 @@ $offset         = wp_timezone()->getOffset( new DateTimeImmutable( 'now', new Da
 $legacy_expires = time() + HOUR_IN_SECONDS + $offset;
 update_post_meta( $reservation_id, HTP_Reservation_Meta::EXPIRES_AT, $legacy_expires );
 delete_post_meta( $reservation_id, HTP_Reservation_Meta::TIMESTAMP_MODEL );
-update_option( 'htp_version', '1.0.0', false );
+// Simulate a pre-release install so the 1.0.0 migration is exercised.
+update_option( 'htp_version', '0.9.0', false );
 // Replaying global admin hooks in WP-CLI also re-runs unrelated plugin callbacks.
 $plugin->maybe_upgrade();
 $plugin->maybe_migrate_inventory_states();

@@ -114,6 +114,7 @@ No. The plugin has no author-operated service, telemetry, tracking, advertisemen
 * Reworked lifecycle and inventory ownership into transactional, idempotent services
 * Added safe cart-before-reservation linkage and checkout fulfillment without double stock reduction
 * Added concurrency locking, cron self-healing, inventory diagnostics, and upgrade reconciliation
+* Preserved cross-request lock exclusivity on current WordPress versions
 * Corrected pending quotas, privacy erasure pagination, order-cancelled handling, and Shop Manager access
 * Added stable service, rule, lifecycle, and notification extension contracts
 * Added HPOS, classic checkout, block checkout, accessibility, role, lifecycle, and exact-artifact verification

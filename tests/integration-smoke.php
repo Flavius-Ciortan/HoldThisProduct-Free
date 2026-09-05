@@ -33,6 +33,18 @@ htp_assert( $htp_plugin->get_service( 'repository' ) instanceof HTP_Reservation_
 htp_assert( $htp_plugin->get_service( 'lifecycle' ) instanceof HTP_Reservation_Lifecycle_Interface, 'Lifecycle implements its extension contract.' );
 htp_assert( $htp_plugin->get_service( 'rules' ) instanceof HTP_Reservation_Rules, 'Reservation rules service is registered.' );
 htp_assert( $htp_plugin->get_service( 'locks' ) instanceof HTP_Lock_Manager, 'Reservation lock service is registered.' );
+$htp_lock_name = 'integration_exclusivity_' . wp_generate_password( 8, false );
+$htp_locks     = $htp_plugin->get_service( 'locks' );
+$htp_first     = $htp_locks->acquire( array( $htp_lock_name ) );
+$htp_second    = $htp_locks->acquire( array( $htp_lock_name ) );
+htp_assert( is_array( $htp_first ) && is_wp_error( $htp_second ) && 'htp_busy' === $htp_second->get_error_code(), 'Reservation locks remain exclusive on current WordPress versions.' );
+$htp_locks->release( array( 'htp_lock_' . sanitize_key( $htp_lock_name ) => 'not-the-owner' ) );
+$htp_third = $htp_locks->acquire( array( $htp_lock_name ) );
+htp_assert( is_wp_error( $htp_third ), 'A non-owner cannot release a reservation lock.' );
+$htp_locks->release( $htp_first );
+$htp_reacquired = $htp_locks->acquire( array( $htp_lock_name ) );
+htp_assert( is_array( $htp_reacquired ), 'A reservation lock can be acquired after its owner releases it.' );
+$htp_locks->release( $htp_reacquired );
 htp_assert( false !== has_action( 'woocommerce_single_product_summary', array( $htp_plugin->frontend, 'display_reservation_fallback' ) ), 'Frontend has a dedicated sold-out product fallback for add-on waitlists.' );
 htp_assert( false !== has_filter( 'render_block_woocommerce/add-to-cart-form', array( $htp_plugin->frontend, 'add_reservation_block_classes' ) ), 'Frontend registers block Add to Cart layout integration.' );
 $htp_block_markup = '<div class="wp-block-add-to-cart-form wc-block-add-to-cart-form"><form class="cart"><button id="htp_reserve_product" type="button">Reserve</button></form></div>';

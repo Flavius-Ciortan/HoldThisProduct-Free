@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-04T18:23:56+03:00\n"
+"POT-Creation-Date: 2026-09-05T04:21:40+03:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: hold-this-product\n"
@@ -770,7 +770,7 @@ msgstr ""
 msgid "Reservation inventory transaction could not be committed."
 msgstr ""
 
-#: includes/class-htp-lock-manager.php:24
+#: includes/class-htp-lock-manager.php:31
 msgid "Another reservation is being processed. Please try again."
 msgstr ""
 

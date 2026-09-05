@@ -38,6 +38,7 @@ All notable changes to Hold This Product are documented here. The project follow
 
 - Prevented checkout from decrementing stock a second time for a held unit.
 - Prevented duplicate last-unit holds under concurrent requests.
+- Preserved cross-request lock exclusivity after WordPress changed duplicate option insertion behavior.
 - Prevented interrupted cancellation or expiration from leaving status and stock out of sync.
 - Recreated a missing expiration schedule during normal health checks.
 - Excluded expired pending requests from customer quota calculations.
